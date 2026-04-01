@@ -116,7 +116,7 @@ CREATE OR REPLACE FUNCTION user_has_lead_access(
     p_lead_id UUID,
     p_required_level VARCHAR DEFAULT 'view'
 )
-RETURNS BOOLEAN AS $
+RETURNS BOOLEAN AS $$
 DECLARE
     v_lead_workspace UUID;
     v_is_member BOOLEAN;
@@ -128,7 +128,7 @@ BEGIN
     -- If no workspace assigned, check org-level access (legacy behavior)
     IF v_lead_workspace IS NULL THEN
         RETURN TRUE;
-    END IF;
+  END IF;
     
     -- Check if user is member of the workspace
     SELECT EXISTS(
@@ -156,7 +156,7 @@ BEGIN
     
     RETURN v_has_shared_access;
 END;
-$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Create view for leads with workspace access info
 CREATE OR REPLACE VIEW leads_with_access AS

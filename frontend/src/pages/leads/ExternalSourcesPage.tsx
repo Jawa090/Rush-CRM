@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Globe, Key, Copy, Check, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Globe, Key, Copy, Check, Trash2, RefreshCw, Power, ExternalLink, Shield, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { useCustomDialog } from '@/contexts/DialogContext';
 
 interface ExternalSource {
   id: string;
@@ -18,6 +20,7 @@ interface ExternalSource {
 
 export default function ExternalSourcesPage() {
   const navigate = useNavigate();
+  const { confirm } = useCustomDialog();
   const [sources, setSources] = useState<ExternalSource[]>([]);
   const [selectedSource, setSelectedSource] = useState<ExternalSource | null>(null);
   const [sourceLeads, setSourceLeads] = useState<any[]>([]);
@@ -32,7 +35,7 @@ export default function ExternalSourcesPage() {
 
   const fetchSources = async () => {
     try {
-      const response = await api.get('/lead-external-sources');
+      const response = await api.get('/lead-external-sources') as ExternalSource[];
       setSources(response);
     } catch (error) {
       console.error('Error fetching sources:', error);
@@ -44,8 +47,8 @@ export default function ExternalSourcesPage() {
   const fetchSourceLeads = async (sourceId: string) => {
     setLeadsLoading(true);
     try {
-      const response = await api.get(`/leads?external_source_id=${sourceId}`);
-      setSourceLeads(response.data || response);
+      const response = await api.get(`/leads?external_source_id=${sourceId}`) as { data: any[] } | any[];
+      setSourceLeads((response as any).data || response);
     } catch (error) {
       console.error('Error fetching source leads:', error);
       setSourceLeads([]);
@@ -75,19 +78,19 @@ export default function ExternalSourcesPage() {
   };
 
   const regenerateKey = async (id: string) => {
-    if (!confirm('Are you sure? This will invalidate the current API key.')) return;
+    if (!await confirm('Are you sure? This will invalidate the current API key.', { variant: 'destructive', title: 'Regenerate API Key' })) return;
     
     try {
       await api.post(`/lead-external-sources/${id}/regenerate-key`);
       fetchSources();
-      alert('API key regenerated successfully');
+      toast.success('API key regenerated successfully');
     } catch (error) {
       console.error('Error regenerating key:', error);
     }
   };
 
   const deleteSource = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this source?')) return;
+    if (!await confirm('Are you sure you want to delete this source?', { variant: 'destructive', title: 'Delete Source' })) return;
     
     try {
       await api.delete(`/lead-external-sources/${id}`);
@@ -334,7 +337,21 @@ function CreateSourceModal({ onClose, onSuccess }: { onClose: () => void; onSucc
     sourceUrl: '',
     workspaceId: ''
   });
+  const [workgroups, setWorkgroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchWorkgroups();
+  }, []);
+
+  const fetchWorkgroups = async () => {
+    try {
+      const response = await api.get('/workgroups') as any[];
+      setWorkgroups(response);
+    } catch (error) {
+      console.error('Error fetching workgroups:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -345,7 +362,7 @@ function CreateSourceModal({ onClose, onSuccess }: { onClose: () => void; onSucc
       onSuccess();
     } catch (error) {
       console.error('Error creating source:', error);
-      alert('Failed to create source');
+      toast.error('Failed to create source');
     } finally {
       setLoading(false);
     }
@@ -395,14 +412,19 @@ function CreateSourceModal({ onClose, onSuccess }: { onClose: () => void; onSucc
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Workspace ID (Optional)</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-gray-700 mb-1">Target Workspace (Optional)</label>
+            <select
               value={formData.workspaceId}
               onChange={(e) => setFormData({ ...formData, workspaceId: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg"
-              placeholder="Leave empty for organization-wide"
-            />
+            >
+              <option value="">All Workspaces (Organization-Wide)</option>
+              {workgroups.map((wg) => (
+                <option key={wg.id} value={wg.id}>
+                  {wg.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex space-x-3">

@@ -9,9 +9,10 @@ const createCustomerSchema = Joi.object({
   tier: Joi.string().allow(null, ''),
   notes: Joi.string().allow(null, ''),
   tags: Joi.array().items(Joi.string()).optional(),
-  leadId: Joi.string().uuid().allow(null),
-  dealId: Joi.string().uuid().allow(null),
-  companyId: Joi.string().uuid().allow(null),
+  leadId: Joi.string().uuid().allow(null, ''),
+  dealId: Joi.string().uuid().allow(null, ''),
+  companyId: Joi.string().uuid().allow(null, ''),
+  industry: Joi.string().allow(null, ''),
 });
 
 const updateCustomerSchema = createCustomerSchema.min(1);
@@ -42,7 +43,7 @@ const getAll = async (req, res, next) => {
     }
 
     if (search) {
-      query += ` AND (c.name ILIKE $${paramIndex} OR c.email ILIKE $${paramIndex} OR co.name ILIKE $${paramIndex})`;
+      query += ` AND (c.name ILIKE $${paramIndex} OR c.email ILIKE $${paramIndex} OR c.industry ILIKE $${paramIndex} OR co.name ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -86,16 +87,16 @@ const getById = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const { error, value } = createCustomerSchema.validate(req.body);
+    const { error, value } = createCustomerSchema.validate(req.body, { stripUnknown: true, allowUnknown: true });
     if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const { name, email, phone, status, tier, notes, tags, leadId, dealId, companyId } = value;
+    const { name, email, phone, status, tier, notes, tags, leadId, dealId, companyId, industry } = value;
     const { rows } = await db.query(
       `INSERT INTO customers
-       (org_id, user_id, name, email, phone, status, tier, notes, tags, lead_id, deal_id, company_id, converted_from_lead_id, converted_from_deal_id)
-       VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'active'), $7, $8, $9, $10, $11, $12, $10, $11)
+       (org_id, user_id, name, email, phone, status, tier, notes, tags, lead_id, deal_id, company_id, industry, converted_from_lead_id, converted_from_deal_id)
+       VALUES ($1, $2, $3, $4, $5, COALESCE($6, 'active'), $7, $8, $9, $10, $11, $12, $13, $10, $11)
        RETURNING *`,
-      [req.user.orgId, req.user.id, name, email, phone, status, tier, notes, tags, leadId, dealId, companyId]
+      [req.user.orgId, req.user.id, name, email, phone, status, tier, notes, tags, leadId === '' ? null : leadId, dealId === '' ? null : dealId, companyId === '' ? null : companyId, industry]
     );
     res.status(201).json(mapDbCustomer(rows[0]));
   } catch (err) {
@@ -106,7 +107,7 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { error, value } = updateCustomerSchema.validate(req.body);
+    const { error, value } = updateCustomerSchema.validate(req.body, { stripUnknown: true, allowUnknown: true });
     if (error) return res.status(400).json({ error: error.details[0].message });
 
     const fields = [];
@@ -123,13 +124,19 @@ const update = async (req, res, next) => {
       leadId: 'lead_id',
       dealId: 'deal_id',
       companyId: 'company_id',
+      industry: 'industry',
     };
 
     Object.entries(value).forEach(([key, val]) => {
       const column = mapping[key];
       if (column) {
         fields.push(`${column} = $${idx}`);
-        values.push(val);
+        // Handle empty strings for ID fields
+        if ((column === 'lead_id' || column === 'deal_id' || column === 'company_id') && val === '') {
+          values.push(null);
+        } else {
+          values.push(val);
+        }
         idx++;
       }
     });

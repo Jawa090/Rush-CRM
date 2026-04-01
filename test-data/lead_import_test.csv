@@ -1,0 +1,6 @@
+first_name,last_name,email,phone,company_name,source,priority,stage,description
+John,Doe,john.doe@example.com,1234567890,Acme Corp,website,high,new,Interested in enterprise plan
+Jane,Smith,jane.smith@test.com,9876543210,Initech,referral,medium,proposal_sent,Referred by Bob
+Robert,Johnson,bob.j@company.org,,Global Tech,ads,low,new,Inquiry from LinkedIn ad
+Sarah,Wilson,sarah.w@business.net,1112223333,Startup Inc,,high,contacted,Needs demo ASAP
+Michael,Brown,mike@brown.co,4445556666,Brown & Sons,website,medium,new,Standard inquiry

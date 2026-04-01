@@ -34,6 +34,7 @@ import {
 import { oneDriveService, OneDriveFile } from "@/services/oneDriveService";
 import { useOneDriveConnection } from "@/hooks/useOneDriveConnection";
 import { toast } from "sonner";
+import { useCustomDialog } from "@/contexts/DialogContext";
 import { getUnifiedFileIcon, formatFileSize, formatRelativeDate } from "./driveUtils";
 import { DriveFileListSkeleton } from "./DriveFileListSkeleton";
 
@@ -58,6 +59,7 @@ export function OneDriveBrowser({ connectionId: propConnectionId, displayName, o
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: "root", name: "OneDrive" }]);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [needsReauth, setNeedsReauth] = useState(false);
+  const { confirm } = useCustomDialog();
 
   const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -143,7 +145,7 @@ export function OneDriveBrowser({ connectionId: propConnectionId, displayName, o
   };
 
   const handleDelete = async (file: OneDriveFile) => {
-    if (!confirm(`Are you sure you want to delete "${file.name}"?`)) return;
+    if (!await confirm(`Are you sure you want to delete "${file.name}"?`, { variant: 'destructive', title: 'Delete Item' })) return;
     try {
       setFiles(prev => prev.filter(f => f.id !== file.id));
       await oneDriveService.deleteFile(connectionId, file.id);

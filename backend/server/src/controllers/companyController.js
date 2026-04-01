@@ -3,26 +3,26 @@ const Joi = require('joi');
 
 const createCompanySchema = Joi.object({
   name: Joi.string().required(),
-  industry: Joi.string().optional(),
-  website: Joi.string().uri().optional().allow(''),
-  phone: Joi.string().optional(),
-  email: Joi.string().email().optional().allow(''),
-  address: Joi.string().optional(),
+  industry: Joi.string().optional().allow('', null),
+  website: Joi.string().uri().optional().allow('', null),
+  phone: Joi.string().optional().allow('', null),
+  email: Joi.string().email().optional().allow('', null),
+  address: Joi.string().optional().allow('', null),
   revenue: Joi.alternatives().try(Joi.number(), Joi.string()).optional().allow(null, ''),
   logoUrl: Joi.string().uri().optional().allow('', null),
-  notes: Joi.string().optional(),
+  notes: Joi.string().optional().allow('', null),
 });
 
 const updateCompanySchema = Joi.object({
   name: Joi.string().optional(),
-  industry: Joi.string().optional().allow(null),
-  website: Joi.string().uri().optional().allow(''),
-  phone: Joi.string().optional().allow(null),
-  email: Joi.string().email().optional().allow(''),
-  address: Joi.string().optional().allow(null),
+  industry: Joi.string().optional().allow('', null),
+  website: Joi.string().uri().optional().allow('', null),
+  phone: Joi.string().optional().allow('', null),
+  email: Joi.string().email().optional().allow('', null),
+  address: Joi.string().optional().allow('', null),
   revenue: Joi.alternatives().try(Joi.number(), Joi.string()).optional().allow(null, ''),
   logoUrl: Joi.string().uri().optional().allow('', null),
-  notes: Joi.string().optional().allow(null),
+  notes: Joi.string().optional().allow('', null),
 }).min(1);
 
 const normalizeCompanyInput = (body = {}) => {

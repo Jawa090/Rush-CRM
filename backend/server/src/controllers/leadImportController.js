@@ -249,7 +249,7 @@ const importLeads = async (req, res, next) => {
         }
 
         // Build dynamic INSERT query based on available fields
-        const columns = ['org_id', 'workspace_id', 'import_id', 'created_by', 'created_at', 'updated_at'];
+        const columns = ['org_id', 'workspace_id', 'import_id', 'created_by'];
         const values = [req.user.orgId, workspaceId || null, importId, req.user.id];
         let paramIndex = 5;
 

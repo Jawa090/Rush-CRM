@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface FieldMapping {
   [csvField: string]: string | null;
@@ -18,6 +20,7 @@ interface DetectedFields {
 
 export default function LeadImportPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<'upload' | 'mapping' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [detectedFields, setDetectedFields] = useState<DetectedFields | null>(null);
@@ -77,7 +80,7 @@ export default function LeadImportPage() {
     } catch (error: any) {
       console.error('Error detecting fields:', error);
       const errorMessage = error?.message || 'Failed to process file';
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -98,10 +101,11 @@ export default function LeadImportPage() {
       });
 
       setImportResult(data);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       setStep('complete');
     } catch (error: any) {
       console.error('Error importing leads:', error);
-      alert('Failed to import leads');
+      toast.error('Failed to import leads');
       setStep('mapping');
     } finally {
       setLoading(false);
@@ -117,25 +121,25 @@ export default function LeadImportPage() {
 
       {/* Progress Steps */}
       <div className="mb-8 flex items-center justify-center space-x-4">
-        <div className={`flex items-center ${step === 'upload' ? 'text-blue-600' : 'text-gray-400'}`}>
+        <div className={`flex items-center ${step === 'upload' ? 'text-primary' : 'text-gray-400'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            step === 'upload' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            step === 'upload' ? 'bg-primary text-white' : 'bg-gray-200'
           }`}>1</div>
-          <span className="ml-2">Upload File</span>
+          <span className="ml-2 font-medium">Upload File</span>
         </div>
         <ArrowRight className="text-gray-400" />
-        <div className={`flex items-center ${step === 'mapping' ? 'text-blue-600' : 'text-gray-400'}`}>
+        <div className={`flex items-center ${step === 'mapping' ? 'text-primary' : 'text-gray-400'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-            step === 'mapping' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            step === 'mapping' ? 'bg-primary text-white' : 'bg-gray-200'
           }`}>2</div>
-          <span className="ml-2">Map Fields</span>
+          <span className="ml-2 font-medium">Map Fields</span>
         </div>
         <ArrowRight className="text-gray-400" />
         <div className={`flex items-center ${step === 'complete' ? 'text-green-600' : 'text-gray-400'}`}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
             step === 'complete' ? 'bg-green-600 text-white' : 'bg-gray-200'
           }`}>3</div>
-          <span className="ml-2">Complete</span>
+          <span className="ml-2 font-medium">Complete</span>
         </div>
       </div>
 
@@ -145,8 +149,8 @@ export default function LeadImportPage() {
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
             <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Upload your file</h3>
-            <p className="text-gray-600 mb-4">CSV or Excel files up to 10MB</p>
-            <label className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700">
+            <p className="text-gray-600 mb-6 font-medium">CSV or Excel files up to 10MB</p>
+            <label className="inline-flex items-center px-6 py-2.5 bg-primary text-white rounded-lg cursor-pointer hover:bg-primary/90 transition-all shadow-md active:scale-95">
               <FileSpreadsheet className="mr-2 h-5 w-5" />
               Choose File
               <input
@@ -199,10 +203,10 @@ export default function LeadImportPage() {
                 </div>
                 <ArrowRight className="text-gray-400 flex-shrink-0" />
                 <div className="flex-1">
-                  <select
+                    <select
                     value={fieldMapping[header] || ''}
                     onChange={(e) => setFieldMapping({ ...fieldMapping, [header]: e.target.value || null })}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                   >
                     <option value="">Skip this field</option>
                     <optgroup label="Standard Fields">
@@ -240,7 +244,7 @@ export default function LeadImportPage() {
             <button
               onClick={handleImport}
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-all shadow-md active:scale-[0.98] font-semibold"
             >
               {loading ? 'Importing...' : 'Import Leads'}
             </button>
@@ -298,8 +302,8 @@ export default function LeadImportPage() {
                   <li>Custom Fields & Notes</li>
                   <li>All mapped data from your file</li>
                 </ul>
-                <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
-                  <p className="text-sm text-blue-800">
+                <div className="mt-4 p-3 bg-primary/10 rounded border border-primary/20">
+                  <p className="text-sm text-primary font-medium">
                     💡 All imported leads are now available in your CRM with complete information. 
                     Click "View Leads" below to see them.
                   </p>
@@ -322,7 +326,7 @@ export default function LeadImportPage() {
             </button>
             <button
               onClick={() => navigate('/crm/leads')}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow-md active:scale-[0.98] font-semibold"
             >
               View All Leads
             </button>

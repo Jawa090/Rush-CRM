@@ -53,8 +53,40 @@ const getByEmailId = async (req, res, next) => {
   } catch (err) { res.json([]); }
 };
 
+const create = async (req, res, next) => {
+  try {
+    const { entityType, entityId, activityType, title, description, metadata } = req.body;
+    
+    if (!entityType || !entityId || !activityType) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const result = await db.query(
+      `INSERT INTO public.crm_activities 
+       (org_id, user_id, entity_type, entity_id, activity_type, title, description, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        req.user.orgId,
+        req.user.id,
+        entityType,
+        entityId,
+        activityType,
+        title,
+        description,
+        metadata ? JSON.stringify(metadata) : null
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getByEntity,
   getRecent,
   getByEmailId,
+  create,
 };

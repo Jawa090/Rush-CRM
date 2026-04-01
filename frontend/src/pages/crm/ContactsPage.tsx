@@ -39,6 +39,7 @@ export default function ContactsPage() {
           ? fullName.includes(term) ||
             (c.email || "").toLowerCase().includes(term) ||
             (c.phone || "").toLowerCase().includes(term) ||
+            (c.position || "").toLowerCase().includes(term) ||
             (c.company_name || "").toLowerCase().includes(term)
           : true;
         const matchesSource = source === "all" || (c.source || "").toLowerCase() === source;
@@ -59,7 +60,7 @@ export default function ContactsPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="font-semibold">{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unnamed"}</span>
-            {c.title && <Badge variant="outline" className="bg-muted/40">{c.title}</Badge>}
+            {c.position && <Badge variant="outline" className="bg-muted/40">{c.position}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground flex items-center gap-2">
             <Mail className="h-3 w-3" /> {c.email || "—"}
@@ -85,6 +86,16 @@ export default function ContactsPage() {
           <Phone className="h-4 w-4" />
           {c.phone || "—"}
         </div>
+      ),
+    },
+    {
+      key: "type",
+      header: "Type",
+      sortable: true,
+      render: (c) => (
+        <Badge variant="secondary" className="capitalize">
+          {c.contact_type || "Contact"}
+        </Badge>
       ),
     },
     {
@@ -115,10 +126,16 @@ export default function ContactsPage() {
           { label: "Filtered", value: filtered.length, tone: "success" },
         ]}
         actions={
-          <Button className="gradient-primary" onClick={() => navigate("/crm/customers/contacts/create")}> 
-            <Plus className="mr-2 h-4 w-4" />
-            New Contact
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/crm/leads/import")}>
+              <Upload className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+            <Button className="gradient-primary" onClick={() => navigate("/crm/customers/contacts/create")}> 
+              <Plus className="mr-2 h-4 w-4" />
+              New Contact
+            </Button>
+          </div>
         }
       />
 

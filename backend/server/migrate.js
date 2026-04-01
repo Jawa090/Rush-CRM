@@ -408,11 +408,119 @@ CREATE INDEX IF NOT EXISTS idx_deal_signing_parties_org ON deal_signing_parties(
 CREATE INDEX IF NOT EXISTS idx_deal_signing_parties_deal ON deal_signing_parties(deal_id);
 
 -- Conversion tracking
+ALTER TABLE deals ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP;
+
+-- Add extended contact fields
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS second_name VARCHAR(255);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS salutation VARCHAR(50);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS dob DATE;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS website VARCHAR(255);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS website_type VARCHAR(50);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS messenger VARCHAR(255);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS messenger_type VARCHAR(50);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS source VARCHAR(100);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS source_info TEXT;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT true;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS include_in_export BOOLEAN DEFAULT true;
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS responsible_id UUID REFERENCES public.users(id);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS observers UUID[];
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS contact_type VARCHAR(50) DEFAULT 'contact';
+
+-- Add extended lead fields for import and tracking
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS company_email VARCHAR(255);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS company_phone VARCHAR(50);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS designation VARCHAR(255);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS website VARCHAR(255);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS agent_name VARCHAR(255);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS service_interested VARCHAR(255);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS company_size VARCHAR(100);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS decision_maker VARCHAR(255);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS source_info TEXT;
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS interaction_notes TEXT;
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS pipeline VARCHAR(100);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS import_id UUID REFERENCES lead_imports(id);
+
+-- Add extended deal fields
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS contact_name VARCHAR(255);
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS priority VARCHAR(50);
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS source VARCHAR(100);
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS source_info TEXT;
+
+-- Lead Import System
+CREATE TABLE IF NOT EXISTS lead_imports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    workspace_id UUID REFERENCES workgroups(id) ON DELETE SET NULL,
+    imported_by UUID NOT NULL REFERENCES users(id),
+    source_type VARCHAR(50) DEFAULT 'csv',
+    file_name VARCHAR(255),
+    file_path TEXT,
+    total_rows INTEGER DEFAULT 0,
+    successful_imports INTEGER DEFAULT 0,
+    failed_imports INTEGER DEFAULT 0,
+    duplicate_skipped INTEGER DEFAULT 0,
+    field_mapping JSONB DEFAULT '{}',
+    status VARCHAR(50) DEFAULT 'processing',
+    error_log JSONB DEFAULT '[]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS lead_external_sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    workspace_id UUID REFERENCES workgroups(id) ON DELETE SET NULL,
+    source_name VARCHAR(255) NOT NULL,
+    source_type VARCHAR(50) DEFAULT 'website',
+    source_url TEXT,
+    api_key VARCHAR(255) UNIQUE,
+    webhook_url TEXT,
+    webhook_secret VARCHAR(255),
+    field_mapping JSONB DEFAULT '{}',
+    default_values JSONB DEFAULT '{}',
+    auto_assign_enabled BOOLEAN DEFAULT false,
+    assignment_rules JSONB DEFAULT '{}',
+    is_active BOOLEAN DEFAULT true,
+    last_sync_at TIMESTAMP WITH TIME ZONE,
+    total_leads_received INTEGER DEFAULT 0,
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add all missing leads columns
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workgroups(id) ON DELETE CASCADE;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS import_id UUID REFERENCES lead_imports(id) ON DELETE SET NULL;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS external_source_id UUID REFERENCES lead_external_sources(id) ON DELETE SET NULL;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_email VARCHAR(255);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_phone VARCHAR(50);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS designation VARCHAR(255);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS agent_name VARCHAR(255);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS service_interested VARCHAR(255);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_size VARCHAR(50);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS decision_maker VARCHAR(255);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS source_info TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS interaction_notes TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS converted_to_deal_id UUID;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS converted_at TIMESTAMP;
-ALTER TABLE deals ADD COLUMN IF NOT EXISTS converted_from_lead_id UUID;
-ALTER TABLE deals ADD COLUMN IF NOT EXISTS converted_to_customer_id UUID;
-ALTER TABLE deals ADD COLUMN IF NOT EXISTS closed_at TIMESTAMP;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
+
+-- Update leads table check constraints if any
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS city VARCHAR(100);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS state VARCHAR(100);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS country VARCHAR(100);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS zip_code VARCHAR(20);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_leads_workspace_id ON leads(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_lead_imports_org ON lead_imports(org_id);
 
 -- Customers can also store conversion reference
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS converted_from_lead_id UUID;

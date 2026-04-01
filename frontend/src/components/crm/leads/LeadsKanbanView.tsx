@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MoreHorizontal, Plus, Building2, GripVertical } from "lucide-react";
+import { MoreHorizontal, Plus, Building2, GripVertical, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,7 +19,7 @@ interface Lead {
   email: string;
   phone: string;
   company: string;
-  status: "new" | "contacted" | "qualified" | "unqualified";
+  status: "new" | "contacted" | "qualified" | "proposal" | "negotiation" | "unqualified";
   source: string;
   value: number;
   assignee?: {
@@ -36,9 +36,11 @@ interface LeadsKanbanViewProps {
 }
 
 const columns = [
-  { id: "new", title: "Unassigned", color: "bg-chart-1" },
-  { id: "contacted", title: "In Progress", color: "bg-warning" },
-  { id: "qualified", title: "Processed", color: "bg-success" },
+  { id: "new", title: "New", color: "bg-chart-1" },
+  { id: "contacted", title: "Contacted", color: "bg-warning" },
+  { id: "qualified", title: "Qualified", color: "bg-success" },
+  { id: "proposal", title: "Proposal Sent", color: "bg-purple-500" },
+  { id: "negotiation", title: "Negotiation", color: "bg-orange-500" },
   { id: "unqualified", title: "Unqualified", color: "bg-muted-foreground" },
 ];
 
@@ -162,9 +164,14 @@ export function LeadsKanbanView({ leads, onCreateLead }: LeadsKanbanViewProps) {
                         >
                           {lead.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {lead.email}
-                        </p>
+                        {lead.email && (
+                          <a 
+                            href={`mailto:${lead.email}`} 
+                            className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors truncate block"
+                          >
+                            {lead.email}
+                          </a>
+                        )}
                       </div>
                     </div>
                     <DropdownMenu>
@@ -195,6 +202,17 @@ export function LeadsKanbanView({ leads, onCreateLead }: LeadsKanbanViewProps) {
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Building2 className="h-3 w-3" />
                         {lead.company}
+                      </div>
+                    )}
+                    {lead.phone && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        <a 
+                          href={`tel:${lead.phone}`} 
+                          className="hover:text-primary hover:underline transition-colors truncate block"
+                        >
+                          {lead.phone}
+                        </a>
                       </div>
                     )}
                     <div className="flex items-center justify-between">

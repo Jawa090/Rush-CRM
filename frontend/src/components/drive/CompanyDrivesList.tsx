@@ -16,6 +16,7 @@ import { useState } from "react";
 import { ManageDrivePermissionsDialog } from "./ManageDrivePermissionsDialog";
 import { googleDriveService } from "@/services/googleDriveService";
 import { toast } from "sonner";
+import { useCustomDialog } from "@/contexts/DialogContext";
 
 const driveTypeIcons: Record<string, { icon: typeof Cloud; color: string }> = {
   google_drive: { icon: Cloud, color: "text-red-500" },
@@ -45,6 +46,7 @@ export function CompanyDrivesList({ onBrowse }: CompanyDrivesListProps) {
   const { userRole } = useAuth();
   const { data: drives, isLoading } = useConnectedDrives("company");
   const { data: oneDriveConn } = useOneDriveConnection();
+  const { confirm } = useCustomDialog();
   const deleteDrive = useDeleteDrive();
   const [managingDrive, setManagingDrive] = useState<ConnectedDrive | null>(null);
 
@@ -63,7 +65,7 @@ export function CompanyDrivesList({ onBrowse }: CompanyDrivesListProps) {
   }
 
   const handleDelete = async (driveId: string) => {
-    if (confirm("Are you sure you want to disconnect this drive? All permissions will be removed.")) {
+    if (await confirm("Are you sure you want to disconnect this drive? All permissions will be removed.", { variant: 'destructive', title: 'Disconnect Drive' })) {
       await deleteDrive.mutateAsync(driveId);
     }
   };

@@ -15,7 +15,7 @@ export function useConvertLeadToDeal() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Lead converted to deal successfully');
     },
-    onError: (error: Error) => toast.error('Failed to convert lead: ' + error.message),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -27,11 +27,12 @@ export function useUpdateDeal() {
       const { id, ...rest } = payload;
       return dealsApi.update(id, rest);
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['deal', variables.id] });
       toast.success('Deal updated successfully');
     },
-    onError: (error: Error) => toast.error('Failed to update deal: ' + error.message),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -44,7 +45,7 @@ export function useDeleteDeal() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Deal deleted');
     },
-    onError: (error: Error) => toast.error('Failed to delete deal: ' + error.message),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 // New: update lead mutation (used by Kanban to move lead between columns)
@@ -55,11 +56,15 @@ export function useUpdateLead() {
       const { id, ...rest } = payload;
       return (await leadsApi.update(id, rest as any)) as any;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: [ 'leads' ] });
+      queryClient.invalidateQueries({ queryKey: [ 'lead', data.id ] });
       toast.success('Lead updated successfully');
     },
-    onError: (error: any) => toast.error(`Failed to update lead: ${error?.message ?? error}`),
+    onError: (error: any) => {
+      const msg = error.response?.data?.error || error.message || "Failed to update lead";
+      toast.error(msg);
+    },
   });
 }
 
@@ -74,7 +79,7 @@ export function useDeleteLead() {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Lead deleted');
     },
-    onError: (error: any) => toast.error(`Failed to delete lead: ${error?.message ?? error}`),
+    onError: (error: any) => toast.error(error?.message ?? error),
   });
 }
 
@@ -90,7 +95,7 @@ export function useUpdateContact() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contact updated');
     },
-    onError: (error: Error) => toast.error(`Failed to update contact: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -103,7 +108,7 @@ export function useDeleteContact() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contact deleted');
     },
-    onError: (error: Error) => toast.error(`Failed to delete contact: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -119,7 +124,7 @@ export function useUpdateCompany() {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Company updated');
     },
-    onError: (error: Error) => toast.error(`Failed to update company: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -132,7 +137,7 @@ export function useDeleteCompany() {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Company deleted');
     },
-    onError: (error: Error) => toast.error(`Failed to delete company: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -145,7 +150,7 @@ export function useLinkDealContact() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Contact linked to deal');
     },
-    onError: (error: Error) => toast.error(`Failed to link contact: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -157,7 +162,7 @@ export function useUnlinkDealContact() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Contact removed from deal');
     },
-    onError: (error: Error) => toast.error(`Failed to remove contact: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -170,7 +175,7 @@ export function useLinkSigningParty() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Signing party added');
     },
-    onError: (error: Error) => toast.error(`Failed to add signing party: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -182,7 +187,7 @@ export function useUnlinkSigningParty() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Signing party removed');
     },
-    onError: (error: Error) => toast.error(`Failed to remove signing party: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -195,7 +200,7 @@ export function useConvertDealToCustomer() {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast.success('Deal converted to customer');
     },
-    onError: (error: Error) => toast.error(`Failed to convert deal: ${error.message}`),
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 

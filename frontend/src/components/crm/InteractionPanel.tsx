@@ -52,13 +52,6 @@ export function InteractionPanel({ entityType, entityId }: InteractionPanelProps
       entity_id: entityId,
       content: commentText,
     });
-    createActivity.mutate({
-      entityType,
-      entityId,
-      activityType: 'comment',
-      title: 'Added a comment',
-      description: commentText.substring(0, 100),
-    });
     setCommentText("");
   };
 
@@ -70,8 +63,9 @@ export function InteractionPanel({ entityType, entityId }: InteractionPanelProps
   };
 
   // Merge activities and comments into a single timeline
+  // Since we use crm_activities for both now, we filter them to avoid duplicates
   const timeline = [
-    ...activities.map(a => ({
+    ...activities.filter(a => a.activity_type !== 'comment').map(a => ({
       id: a.id,
       type: 'activity' as const,
       content: a.title || a.description || a.activity_type,
@@ -79,15 +73,17 @@ export function InteractionPanel({ entityType, entityId }: InteractionPanelProps
       activityType: a.activity_type,
       createdAt: a.created_at,
       userId: a.user_id,
+      userName: a.user_name,
     })),
     ...comments.map(c => ({
       id: c.id,
       type: 'comment' as const,
-      content: c.content,
+      content: c.content || c.description, // Support both formats
       detail: null,
       activityType: 'comment',
       createdAt: c.created_at,
       userId: c.user_id,
+      userName: c.user_name,
       isEdited: c.is_edited,
     })),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -186,7 +182,7 @@ export function InteractionPanel({ entityType, entityId }: InteractionPanelProps
                     "text-xs",
                     item.type === 'activity' ? "bg-chart-1/10 text-chart-1" : "bg-primary/10 text-primary"
                   )}>
-                    {item.type === 'activity' ? <Activity className="h-3 w-3" /> : "U"}
+                    {item.type === 'activity' ? <Activity className="h-3 w-3" /> : (item.userName?.charAt(0) || "U")}
                   </AvatarFallback>
                 </Avatar>
                 <div className="absolute left-1/2 top-7 bottom-0 w-px bg-border -translate-x-1/2" />

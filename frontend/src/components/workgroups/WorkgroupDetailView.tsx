@@ -32,6 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { useCustomDialog } from "@/contexts/DialogContext";
 
 interface Props {
   workgroupId: string;
@@ -40,6 +41,7 @@ interface Props {
 
 export default function WorkgroupDetailView({ workgroupId, onBack }: Props) {
   const { user } = useAuth();
+  const { prompt, confirm } = useCustomDialog();
   const { data: workgroup } = useWorkgroup(workgroupId);
   const { data: members = [], isLoading: membersLoading } = useWorkgroupMembers(workgroupId);
   const { data: posts = [], isLoading: postsLoading } = useWorkgroupPosts(workgroupId);
@@ -596,9 +598,11 @@ export default function WorkgroupDetailView({ workgroupId, onBack }: Props) {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
+                              <DropdownMenuItem onClick={async () => {
                                 // Edit wiki page
-                                const newContent = prompt('Edit page content:', page.content);
+                                const newContent = await prompt('Edit page content:', page.content || '', {
+                                  title: 'Edit Wiki Page'
+                                });
                                 if (newContent !== null) {
                                   workgroupsApi.updateWikiPage(workgroupId, page.id, { content: newContent })
                                     .then(() => {
@@ -622,6 +626,11 @@ export default function WorkgroupDetailView({ workgroupId, onBack }: Props) {
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={async () => {
+                                  if (!await confirm('Are you sure you want to delete this wiki page?', { 
+                                    variant: 'destructive', 
+                                    title: 'Delete Wiki Page' 
+                                  })) return;
+                                  
                                   try {
                                     await workgroupsApi.deleteWikiPage(workgroupId, page.id);
                                     refetchWiki();
