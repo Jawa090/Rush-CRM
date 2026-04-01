@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS leave_requests (
 
 -- Insert default leave types for all organizations
 INSERT INTO leave_types (org_id, user_id, name, days_allowed)
-SELECT DISTINCT org_id, user_id, 'Annual Leave', 25
+SELECT DISTINCT org_id, id, 'Annual Leave', 25
 FROM users 
 WHERE NOT EXISTS (
   SELECT 1 FROM leave_types 
@@ -63,7 +63,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO leave_types (org_id, user_id, name, days_allowed)
-SELECT DISTINCT org_id, user_id, 'Sick Leave', 10
+SELECT DISTINCT org_id, id, 'Sick Leave', 10
 FROM users 
 WHERE NOT EXISTS (
   SELECT 1 FROM leave_types 
@@ -72,7 +72,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO leave_types (org_id, user_id, name, days_allowed)
-SELECT DISTINCT org_id, user_id, 'Personal Leave', 5
+SELECT DISTINCT org_id, id, 'Personal Leave', 5
 FROM users 
 WHERE NOT EXISTS (
   SELECT 1 FROM leave_types 
@@ -81,7 +81,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO leave_types (org_id, user_id, name, days_allowed)
-SELECT DISTINCT org_id, user_id, 'Emergency Leave', 3
+SELECT DISTINCT org_id, id, 'Emergency Leave', 3
 FROM users 
 WHERE NOT EXISTS (
   SELECT 1 FROM leave_types 
