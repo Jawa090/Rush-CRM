@@ -148,20 +148,53 @@ const updateLeadSchema = Joi.object({
 
 const getAll = async (req, res, next) => {
   try {
-    const { page = 1, limit = 50, stage, status, search } = req.query;
+    const { page = 1, limit = 50, stage, status, search, workspaceId, external_source_id } = req.query;
     const offset = (page - 1) * limit;
 
     let query = `
       SELECT l.*, 
              c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
-             co.name as company_name
+             co.name as company_name,
+             w.name as workspace_name
       FROM public.leads l
       LEFT JOIN public.contacts c ON c.id = l.contact_id
       LEFT JOIN public.companies co ON co.id = l.company_id
+      LEFT JOIN public.workgroups w ON w.id = l.workspace_id
       WHERE l.org_id = $1
     `;
     const params = [req.user.orgId];
     let paramIndex = 2;
+
+    // External source filter
+    if (external_source_id) {
+      query += ` AND l.external_source_id = $${paramIndex}`;
+      params.push(external_source_id);
+      paramIndex++;
+    }
+
+    // Workspace filtering
+    if (workspaceId) {
+      query += ` AND l.workspace_id = $${paramIndex}`;
+      params.push(workspaceId);
+      paramIndex++;
+    } else {
+      // Only show leads user has access to via workspace membership or shared access
+      query += ` AND (
+        l.workspace_id IS NULL OR
+        EXISTS (
+          SELECT 1 FROM workgroup_members wm 
+          WHERE wm.workgroup_id = l.workspace_id AND wm.user_id = $${paramIndex}
+        ) OR
+        EXISTS (
+          SELECT 1 FROM lead_workspace_access lwa
+          JOIN workgroup_members wm ON wm.workgroup_id = lwa.workspace_id
+          WHERE lwa.lead_id = l.id AND wm.user_id = $${paramIndex}
+          AND (lwa.expires_at IS NULL OR lwa.expires_at > CURRENT_TIMESTAMP)
+        )
+      )`;
+      params.push(req.user.id);
+      paramIndex++;
+    }
 
     if (stage) {
       query += ` AND l.stage = $${paramIndex}`;
@@ -324,19 +357,33 @@ const create = async (req, res, next) => {
       interactionNotes, firstMessage, lastTouch
     } = value;
 
+    // Get workspace from request
+    const workspaceId = req.body.workspaceId || null;
+
+    // Verify user has access to workspace if specified
+    if (workspaceId) {
+      const memberCheck = await db.query(
+        'SELECT 1 FROM workgroup_members WHERE workgroup_id = $1 AND user_id = $2',
+        [workspaceId, req.user.id]
+      );
+      if (memberCheck.rows.length === 0) {
+        return res.status(403).json({ error: 'You do not have access to this workspace' });
+      }
+    }
+
     let result;
     try {
       result = await db.query(
         `INSERT INTO public.leads 
-         (org_id, user_id, title, name, stage, status, source, value, currency, priority, 
+         (org_id, user_id, workspace_id, title, name, stage, status, source, value, currency, priority, 
           notes, tags, expected_close_date, contact_id, company_id,
           designation, phone, email, website, address, company_name, company_phone,
           company_email, company_size, agent_name, decision_maker, service_interested,
           interaction_notes, first_message, last_touch)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                 $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+                 $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
          RETURNING *`,
-        [req.user.orgId, req.user.id, title, name, stage, status, source, leadValue, 
+        [req.user.orgId, req.user.id, workspaceId, title, name, stage, status, source, leadValue, 
          currency, priority, notes, tags, expectedCloseDate, contactId, companyId,
          designation, phone, email, website, address, companyName, companyPhone,
          companyEmail, companySize, agentName, decisionMaker, serviceInterested,

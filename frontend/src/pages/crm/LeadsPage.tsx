@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Sparkles, Mail, Phone, Building2, Filter, Download, Upload, MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Sparkles, Mail, Phone, Building2, Filter, Download, Upload, MoreHorizontal, Edit, Trash2, Eye, Globe } from "lucide-react";
 import { useLeads, useDeleteLead } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { LeadsKanbanView } from "@/components/crm/leads/LeadsKanbanView";
 import { LeadsActivitiesView } from "@/components/crm/leads/LeadsActivitiesView";
 import { LeadsCalendarView } from "@/components/crm/leads/LeadsCalendarView";
+import { WorkspaceFilter } from "@/components/crm/leads/WorkspaceFilter";
 import { PageHeader } from "@/components/crm/ui/PageHeader";
 import { DataToolbar } from "@/components/crm/ui/DataToolbar";
 import { EntityTable, EntityColumn } from "@/components/crm/ui/EntityTable";
@@ -46,6 +47,7 @@ export default function LeadsPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
+  const [workspaceFilter, setWorkspaceFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
@@ -308,7 +310,11 @@ export default function LeadsPage() {
                 </Button>
               </div>
             )}
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => navigate('/crm/leads/external-sources')}>
+              <Globe className="h-4 w-4 mr-2" />
+              External Sources
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/crm/leads/import')}>
               <Upload className="h-4 w-4 mr-2" />
               Import
             </Button>
@@ -368,8 +374,13 @@ export default function LeadsPage() {
         ]}
         onViewChange={(v) => setView(v as ViewType)}
       >
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setType("all")}>
+        <div className="flex gap-2 items-center">
+          <WorkspaceFilter 
+            value={workspaceFilter} 
+            onChange={setWorkspaceFilter}
+            className="border-blue-200 bg-blue-50"
+          />
+          <Button variant="outline" size="sm" onClick={() => { setType("all"); setWorkspaceFilter("all"); }}>
             Reset Filters
           </Button>
           {filtered.length > 0 && (
