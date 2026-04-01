@@ -31,6 +31,9 @@ import WorkgroupsPage from "./pages/collaboration/WorkgroupsPage";
 // CRM
 import LeadsPage from "./pages/crm/LeadsPage";
 import CreateLeadPage from "./pages/crm/CreateLeadPage";
+import LeadImportPage from "./pages/leads/LeadImportPage";
+import ExternalSourcesPage from "./pages/leads/ExternalSourcesPage";
+import CreateWorkspacePage from "./pages/workspaces/CreateWorkspacePage";
 import DealsPage from "./pages/crm/DealsPage";
 import CreateDealPage from "./pages/crm/CreateDealPage";
 import CustomersPage from "./pages/crm/CustomersPage";
@@ -125,7 +128,10 @@ const App = () => (
                 {/* CRM Routes */}
                 <Route path="/crm/leads" element={<LeadsPage />} />
                 <Route path="/crm/leads/create" element={<CreateLeadPage />} />
+                <Route path="/crm/leads/import" element={<LeadImportPage />} />
+                <Route path="/crm/leads/external-sources" element={<ExternalSourcesPage />} />
                 <Route path="/crm/leads/:id" element={<LeadDetailPage />} />
+                <Route path="/workspaces/create" element={<CreateWorkspacePage />} />
                 <Route path="/crm/deals" element={<DealsPage />} />
                 <Route path="/crm/deals/create" element={<CreateDealPage />} />
                 <Route path="/crm/deals/:id" element={<DealDetailPage />} />

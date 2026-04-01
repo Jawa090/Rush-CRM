@@ -7,6 +7,9 @@ const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const leadRoutes = require('./routes/leads');
+const leadImportRoutes = require('./routes/leadImport');
+const leadExternalSourceRoutes = require('./routes/leadExternalSource');
+const leadWorkspaceRoutes = require('./routes/leadWorkspace');
 const dealRoutes = require('./routes/deals');
 const contactRoutes = require('./routes/contacts');
 const companyRoutes = require('./routes/companies');
@@ -73,6 +76,9 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/lead-import', leadImportRoutes);
+app.use('/api/lead-external-sources', leadExternalSourceRoutes);
+app.use('/api/lead-workspace', leadWorkspaceRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/deals', dealRoutes);
 app.use('/api/contacts', contactRoutes);

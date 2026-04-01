@@ -7,7 +7,7 @@ import {
   CheckCircle, XCircle, AlertCircle, Zap, ChevronDown, ChevronRight, 
   TrendingUp, Users, Target, Award, Briefcase, Calendar as CalendarIcon,
   History, Plus, Edit3, Send, PhoneCall, Video, MessageCircle, 
-  BarChart3, PieChart, TrendingDown, Eye, Filter, Search, Settings
+  BarChart3, PieChart, TrendingDown, Eye, Filter, Search, Settings, Share2
 } from "lucide-react";
 import { ClickToCall } from "@/components/telephony/ClickToCall";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { InteractionPanel } from "@/components/crm/InteractionPanel";
 import { CreatableSelect } from "@/components/crm/CreatableSelect";
 import { EntityFilesSection } from "@/components/crm/EntityFilesSection";
+import { WorkspaceShareModal } from "@/components/crm/leads/WorkspaceShareModal";
 import { useLead } from "@/hooks/useCrmInteractions";
 import { useUpdateLead, useDeleteLead, useConvertLeadToDeal } from "@/hooks/useCrmMutations";
 import { useCreateActivity } from "@/hooks/useCrmInteractions";
@@ -202,6 +203,7 @@ export default function LeadDetailPage() {
 
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Record<string, unknown>>({});
+  const [showWorkspaceModal, setShowWorkspaceModal] = useState(false);
 
   useEffect(() => {
     if (lead) {
@@ -227,6 +229,20 @@ export default function LeadDetailPage() {
         customer_type: lead.customer_type,
         company_size: lead.company_size,
         decision_maker: lead.decision_maker,
+        // Additional imported fields
+        notes: lead.notes,
+        priority: lead.priority,
+        pipeline: lead.pipeline,
+        tags: lead.tags,
+        expected_close_date: lead.expected_close_date,
+        last_contacted_date: lead.last_contacted_date,
+        next_follow_up_date: lead.next_follow_up_date,
+        first_message: lead.first_message,
+        last_touch: lead.last_touch,
+        phone_type: lead.phone_type,
+        email_type: lead.email_type,
+        website_type: lead.website_type,
+        responsible_person: lead.responsible_person,
       });
     }
   }, [lead]);
@@ -523,6 +539,11 @@ export default function LeadDetailPage() {
                       <DropdownMenuItem>
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Send Message
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowWorkspaceModal(true)}>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Manage Workspace Access
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <AlertDialog>
@@ -1069,6 +1090,19 @@ export default function LeadDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Workspace Share Modal */}
+      {showWorkspaceModal && (
+        <WorkspaceShareModal
+          leadId={lead.id}
+          leadTitle={lead.title}
+          currentWorkspaceName={lead.workspace_name}
+          onClose={() => setShowWorkspaceModal(false)}
+          onSuccess={() => {
+            // Optionally refresh lead data
+          }}
+        />
+      )}
     </div>
   );
 }
