@@ -9,7 +9,6 @@ router.get('/', leadController.getAll);
 router.get('/stats', leadController.getStats);
 router.get('/stages', leadController.getStages);
 router.post('/stages', leadController.createStage);
-router.post('/import', leadController.importLeads);
 router.get('/:id', leadController.getById);
 router.post('/', leadController.create);
 router.post('/:id/convert-to-deal', leadController.convertToDeal);
