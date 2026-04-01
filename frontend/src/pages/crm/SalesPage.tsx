@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, TrendingUp, ShoppingCart, Target, Plus, Sparkles } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { DollarSign, TrendingUp, ShoppingCart, Target, Plus, Sparkles, Building2 } from "lucide-react";
 import { dealsApi } from "@/lib/api";
 import { PageHeader } from "@/components/crm/ui/PageHeader";
 import { DataToolbar } from "@/components/crm/ui/DataToolbar";
@@ -18,6 +19,7 @@ const formatCurrency = (value?: number | string) => {
 };
 
 export default function SalesPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
@@ -126,7 +128,7 @@ export default function SalesPage() {
           { label: "Orders", value: filtered.length, tone: "info" },
         ]}
         actions={
-          <Button className="gradient-primary">
+          <Button className="gradient-primary" onClick={() => navigate("/crm/deals/create")}>
             <Plus className="mr-2 h-4 w-4" />
             New Order
           </Button>

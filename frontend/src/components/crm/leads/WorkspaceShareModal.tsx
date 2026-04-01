@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useCustomDialog } from '@/contexts/DialogContext';
 
 interface Workspace {
   id: string;
@@ -47,6 +48,7 @@ export function WorkspaceShareModal({
   const [accessLevel, setAccessLevel] = useState<string>('view');
   const [expiresIn, setExpiresIn] = useState<string>('never');
   const [loading, setLoading] = useState(false);
+  const { confirm } = useCustomDialog();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,8 +58,8 @@ export function WorkspaceShareModal({
   const fetchData = async () => {
     try {
       const [available, shared] = await Promise.all([
-        api.get(`/lead-workspace/${leadId}/available-workspaces`),
-        api.get(`/lead-workspace/${leadId}/shared-workspaces`)
+        api.get(`/lead-workspace/${leadId}/available-workspaces`) as Promise<Workspace[]>,
+        api.get(`/lead-workspace/${leadId}/shared-workspaces`) as Promise<SharedWorkspace[]>
       ]);
       setAvailableWorkspaces(available);
       setSharedWorkspaces(shared);
@@ -109,7 +111,7 @@ export function WorkspaceShareModal({
   };
 
   const handleRemoveAccess = async (workspaceId: string, workspaceName: string) => {
-    if (!confirm(`Remove access for "${workspaceName}"?`)) return;
+    if (!await confirm(`Remove access for "${workspaceName}"?`, { variant: 'destructive', title: 'Remove Access' })) return;
 
     try {
       await api.delete(`/lead-workspace/${leadId}/workspace/${workspaceId}`);

@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { networkDriveService, NetworkFile, NetworkDriveCredentials } from "@/services/networkDriveService";
 import { toast } from "sonner";
+import { useCustomDialog } from "@/contexts/DialogContext";
 import { ConnectedDrive } from "@/hooks/useDrives";
 import { Label } from "@/components/ui/label";
 
@@ -71,6 +72,7 @@ export function NetworkDriveBrowser({ drive, onClose }: NetworkDriveBrowserProps
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [credentials, setCredentials] = useState<NetworkDriveCredentials | null>(null);
   const [showCredentialsDialog, setShowCredentialsDialog] = useState(false);
+  const { confirm } = useCustomDialog();
   const [tempCredentials, setTempCredentials] = useState<NetworkDriveCredentials>({});
   const [notSupported, setNotSupported] = useState(false);
   const [notSupportedMessage, setNotSupportedMessage] = useState("");
@@ -192,7 +194,7 @@ export function NetworkDriveBrowser({ drive, onClose }: NetworkDriveBrowserProps
   };
 
   const handleDelete = async (file: NetworkFile) => {
-    if (!confirm(`Are you sure you want to delete "${file.name}"?`)) return;
+    if (!await confirm(`Are you sure you want to delete "${file.name}"?`, { variant: 'destructive', title: 'Delete Item' })) return;
     
     try {
       await networkDriveService.delete(drive.id, protocol, file.path, credentials || undefined);

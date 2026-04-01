@@ -43,8 +43,8 @@ const stageOptions = [
   { value: "new", label: "New" },
   { value: "contacted", label: "Contacted" },
   { value: "qualified", label: "Qualified" },
-  { value: "proposal_sent", label: "Proposal Sent" },
-  { value: "close_deal", label: "Close Deal" },
+  { value: "proposal", label: "Proposal Sent" },
+  { value: "negotiation", label: "Negotiation" },
 ];
 
 const sourceOptions = [

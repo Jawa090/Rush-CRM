@@ -1,0 +1,6 @@
+Name,Email,Phone,Company,Job Title,Source,Status,Value,Website,Address,Notes,Agent,Service Interested
+John Doe,john.doe@example.com,+15551234567,Acme Corp,CEO,LinkedIn,New,5000,https://acme.com,"123 Business Way, New York",Interested in enterpise plan,Sales Rep 1,CRM Integration
+Jane Smith,jane.smith@testmail.com,+15559876543,TechFlow Solutions,Product Manager,Referral,Contacted,2500,https://techflow.io,"456 Innovation Dr, San Francisco",Wants a demo of the analytics module,Sales Rep 2,Analytics Dashboard
+Michael Brown,m.brown@globalbiz.net,+442071234567,Global Business Ltd,Marketing Director,Google Ads,Qualified,15000,https://globalbiz.net,"78 Leadenhall St, London",Looking for multi-region support,Sales Rep 1,Global Expansion Suite
+Sarah Wilson,s.wilson@startup.io,+15550001111,NextGen AI,Founder,Direct,Unqualified,0,https://nextgen.ai,"900 Market St, Philadelphia",Just exploring for now,Sales Rep 3,AI Chatbot
+Robert Taylor,rtaylor@builder.co,+15552223333,Taylor Construction,Owner,Word of Mouth,Qualified,8500,https://taylorbuild.com,"101 Industrial Ave, Chicago",Needs custom billing workflows,Sales Rep 2,Custom Billing

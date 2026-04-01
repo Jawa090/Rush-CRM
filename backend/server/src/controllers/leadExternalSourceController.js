@@ -23,6 +23,12 @@ const createExternalSource = async (req, res, next) => {
     const apiKey = `ls_${crypto.randomBytes(32).toString('hex')}`;
     const webhookSecret = crypto.randomBytes(32).toString('hex');
 
+    // Validate UUID format if workspaceId is provided
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (workspaceId && workspaceId !== '' && !uuidRegex.test(workspaceId)) {
+      return res.status(400).json({ error: 'Invalid Workspace ID format' });
+    }
+
     const result = await db.query(
       `INSERT INTO lead_external_sources 
        (org_id, workspace_id, source_name, source_type, source_url, api_key, webhook_secret,
@@ -31,7 +37,7 @@ const createExternalSource = async (req, res, next) => {
        RETURNING *`,
       [
         req.user.orgId,
-        workspaceId || null,
+        (workspaceId && workspaceId !== '') ? workspaceId : null,
         sourceName,
         sourceType,
         sourceUrl || null,

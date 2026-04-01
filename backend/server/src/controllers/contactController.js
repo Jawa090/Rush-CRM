@@ -3,14 +3,20 @@ const Joi = require('joi');
 
 const createContactSchema = Joi.object({
   firstName: Joi.string().required(),
-  lastName: Joi.string().optional(),
-  email: Joi.string().email().optional(),
-  phone: Joi.string().optional(),
-  companyId: Joi.string().uuid().optional().allow(null),
-  position: Joi.string().optional(),
-  source: Joi.string().optional(),
-  notes: Joi.string().optional(),
+  lastName: Joi.string().optional().allow('', null),
+  email: Joi.string().email().optional().allow('', null),
+  phone: Joi.string().optional().allow('', null),
+  companyId: Joi.string().uuid().optional().allow('', null),
+  companyName: Joi.string().optional().allow('', null),
+  position: Joi.string().optional().allow('', null),
+  source: Joi.string().optional().allow('', null),
+  contactType: Joi.string().optional().allow('', null),
+  address: Joi.string().optional().allow('', null),
+  messenger: Joi.string().optional().allow('', null),
+  notes: Joi.string().optional().allow('', null),
   tags: Joi.array().items(Joi.string()).optional(),
+  availableToEveryone: Joi.boolean().optional(),
+  includedInExport: Joi.boolean().optional(),
 });
 
 const updateContactSchema = Joi.object({
@@ -31,7 +37,7 @@ const getAll = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     let query = `
-      SELECT c.*, co.name as company_name
+      SELECT c.*, COALESCE(co.name, c.company_name) as company_name
       FROM public.contacts c
       LEFT JOIN public.companies co ON co.id = c.company_id
       WHERE c.org_id = $1
@@ -46,7 +52,7 @@ const getAll = async (req, res, next) => {
     }
 
     if (search) {
-      query += ` AND (c.first_name ILIKE $${paramIndex} OR c.last_name ILIKE $${paramIndex} OR c.email ILIKE $${paramIndex})`;
+      query += ` AND (c.first_name ILIKE $${paramIndex} OR c.last_name ILIKE $${paramIndex} OR c.email ILIKE $${paramIndex} OR c.company_name ILIKE $${paramIndex} OR co.name ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -105,10 +111,16 @@ const normalizeContactInput = (body = {}) => {
     email: body.email ?? null,
     phone: body.phone ?? null,
     companyId: companyId === '' ? null : companyId ?? null,
+    companyName: body.companyName ?? body.company_name ?? null,
     position: body.position ?? body.title ?? body.job_title ?? null,
     source: body.source ?? null,
     notes: body.notes ?? null,
     tags: body.tags ?? body.labels ?? undefined,
+    contactType: body.contactType ?? body.contact_type ?? 'contact',
+    address: body.address ?? null,
+    messenger: body.messenger ?? null,
+    availableToEveryone: body.availableToEveryone ?? body.available_to_everyone ?? true,
+    includedInExport: body.includedInExport ?? body.included_in_export ?? true,
   };
 };
 
@@ -118,44 +130,27 @@ const create = async (req, res, next) => {
     const { error, value } = createContactSchema.validate(normalized, { stripUnknown: true, allowUnknown: true });
     if (error) throw error;
 
-    const { firstName, lastName, email, phone, companyId, position, source, notes, tags } = value;
-
-    let result;
-    try {
-      result = await db.query(
-        `INSERT INTO public.contacts 
-         (org_id, first_name, last_name, email, phone, company_id, position, notes, tags, contact_type, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING *`,
-        [req.user.orgId, firstName, lastName, email, phone, companyId, position, notes, tags, 'contact', req.user.id]
-      );
-    } catch (err) {
-      if (err.code === '42703') {
-        // Fallback for older schemas without position/contact_type/created_by/notes/tags
-        result = await db.query(
-          `INSERT INTO public.contacts 
-           (org_id, first_name, last_name, email, phone, company_id)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           RETURNING *`,
-          [req.user.orgId, firstName, lastName, email, phone, companyId]
-        );
-      } else {
-        throw err;
-      }
-    }
+    const { firstName, lastName, email, phone, companyId, companyName, position, source, notes, tags, contactType, address, messenger, availableToEveryone, includedInExport } = value;
+    const { rows } = await db.query(
+      `INSERT INTO public.contacts 
+       (org_id, first_name, last_name, email, phone, company_id, company_name, position, source, notes, tags, contact_type, address, messenger, available_to_everyone, included_in_export, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       RETURNING *`,
+      [req.user.orgId, firstName, lastName, email, phone, companyId, companyName, position, source, notes, tags, contactType, address, messenger, availableToEveryone, includedInExport, req.user.id]
+    );
 
     try {
       await db.query(
         `INSERT INTO public.crm_activities 
          (org_id, user_id, entity_type, entity_id, activity_type, title, description)
          VALUES ($1, $2, 'contact', $3, 'created', $4, $5)`,
-        [req.user.orgId, req.user.id, result.rows[0].id, 'Contact Created', `${firstName} ${lastName || ''}`]
+        [req.user.orgId, req.user.id, rows[0].id, 'Contact Created', `${firstName} ${lastName || ''}`]
       );
     } catch (activityErr) {
       console.error('Failed to log contact activity:', activityErr.message || activityErr);
     }
 
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(rows[0]);
   } catch (err) {
     next(err);
   }
@@ -183,8 +178,13 @@ const update = async (req, res, next) => {
 
     const fieldMapping = {
       firstName: 'first_name', lastName: 'last_name', email: 'email',
-      phone: 'phone', companyId: 'company_id', position: 'position',
-      source: 'source', notes: 'notes', tags: 'tags',
+      phone: 'phone', companyId: 'company_id', companyName: 'company_name',
+      position: 'position', source: 'source', notes: 'notes', tags: 'tags',
+      contactType: 'contact_type',
+      availableToEveryone: 'available_to_everyone',
+      includedInExport: 'included_in_export',
+      address: 'address',
+      messenger: 'messenger',
     };
 
     for (const [key, val] of Object.entries(value)) {

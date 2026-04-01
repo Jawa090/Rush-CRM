@@ -14,18 +14,18 @@ export function useCreateActivity() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
+    mutationFn: (data: {
       entityType: string;
       entityId: string;
       activityType: string;
       title?: string;
       description?: string;
-    }) => {
-      return data;
-    },
+      metadata?: any;
+    }) => activitiesApi.create(data),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['activities', vars.entityType, vars.entityId] });
     },
+    onError: (error: any) => toast.error(error.message || 'Failed to create activity'),
   });
 }
 
@@ -61,14 +61,14 @@ export function useCompany(id: string) {
   });
 }
 
-// Comments timeline helpers (stubs to support UI until backend supports comments)
+// Comments timeline helpers (unified with activities for now)
 export function useComments(entityType: string, entityId: string) {
   const queryKey = ['comments', entityType, entityId];
   return useQuery({
     queryKey,
     queryFn: async () => {
-      // Placeholder: fetch from API if available in future
-      return [];
+      const activities = await activitiesApi.getByEntity(entityType, entityId);
+      return activities.filter((a: any) => a.activity_type === 'comment');
     },
     enabled: !!entityId && !!entityType,
   });
@@ -77,15 +77,20 @@ export function useComments(entityType: string, entityId: string) {
 export function useCreateComment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { entity_type: string; entity_id: string; content: string }) => {
-      // Placeholder: would call API to create a comment
-      return payload;
-    },
+    mutationFn: (payload: { entity_type: string; entity_id: string; content: string }) => 
+      activitiesApi.create({
+        entityType: payload.entity_type,
+        entityId: payload.entity_id,
+        activityType: 'comment',
+        description: payload.content,
+        title: 'Comment added'
+      }),
     onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['activities', vars.entity_type, vars.entity_id] });
       queryClient.invalidateQueries({ queryKey: ['comments', vars.entity_type, vars.entity_id] });
       toast.success('Comment created');
     },
-    onError: (error: any) => toast.error(`Failed to create comment: ${error?.message ?? error}`),
+    onError: (error: any) => toast.error(error.message || 'Failed to create comment'),
   });
 }
 

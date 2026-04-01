@@ -66,7 +66,7 @@ function Field({ label, value, onChange, editing, icon, multiline, type = "text"
           {label}
           {required && <span className="text-red-500">*</span>}
         </Label>
-        <div className="h-10 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 flex items-center">
+        <div className="min-h-[2.5rem] px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 flex items-center">
           <span className="text-gray-400 italic">Not specified</span>
         </div>
       </div>
@@ -86,7 +86,7 @@ function Field({ label, value, onChange, editing, icon, multiline, type = "text"
             value={value || ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="min-h-[100px] resize-none border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+            className="min-h-[100px] resize-none border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
         ) : (
           <Input
@@ -94,12 +94,18 @@ function Field({ label, value, onChange, editing, icon, multiline, type = "text"
             value={value || ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+            className="h-10 border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
           />
         )
       ) : (
-        <div className="h-10 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 flex items-center">
-          <span className="text-gray-900 font-medium">{value}</span>
+        <div className="min-h-[2.5rem] px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 flex items-center overflow-hidden">
+          {type === "tel" ? (
+            <a href={`tel:${value}`} className="text-primary hover:underline font-medium break-all w-full">{value}</a>
+          ) : type === "email" ? (
+            <a href={`mailto:${value}`} className="text-primary hover:underline font-medium break-all w-full">{value}</a>
+          ) : (
+            <span className="text-gray-900 font-medium break-all w-full">{value}</span>
+          )}
         </div>
       )}
     </div>
@@ -110,10 +116,10 @@ const pipelineStages = [
   { 
     id: "new", 
     label: "New Lead", 
-    color: "bg-blue-500",
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-700",
-    borderColor: "border-blue-200",
+    color: "bg-primary",
+    bgColor: "bg-primary/5",
+    textColor: "text-primary",
+    borderColor: "border-primary/20",
     icon: <AlertCircle className="h-4 w-4" />,
     description: "Fresh lead, needs initial contact"
   },
@@ -172,7 +178,7 @@ const pipelineStages = [
 const getStatusColor = (status: string) => {
   switch (status?.toLowerCase()) {
     case 'qualified': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-    case 'contacted': return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'contacted': return 'bg-primary/5 text-primary border-primary/20';
     case 'unqualified': return 'bg-red-50 text-red-700 border-red-200';
     case 'new': return 'bg-amber-50 text-amber-700 border-amber-200';
     case 'proposal': return 'bg-purple-50 text-purple-700 border-purple-200';
@@ -249,9 +255,9 @@ export default function LeadDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-primary/5 flex items-center justify-center">
         <div className="text-center bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <h3 className="text-lg font-semibold text-slate-900 mb-2">Loading Lead Details</h3>
           <p className="text-slate-600">Please wait while we fetch the information...</p>
         </div>
@@ -259,16 +265,16 @@ export default function LeadDetailPage() {
     );
   }
 
-  if (!lead && !isLoading) {
+  if (!lead && !isLoading && !deleteLead.isPending && !deleteLead.isSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-primary/5 flex items-center justify-center">
         <div className="text-center bg-white p-8 rounded-2xl shadow-xl border border-slate-200 max-w-md">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="h-8 w-8 text-red-600" />
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-2">Lead Not Found</h2>
           <p className="text-slate-600 mb-6">The lead you're looking for doesn't exist or may have been removed.</p>
-          <Button onClick={() => navigate('/crm/leads')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2">
+          <Button onClick={() => navigate('/crm/leads')} className="bg-primary hover:bg-primary/90 text-white px-6 py-2">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Leads
           </Button>
@@ -289,50 +295,23 @@ export default function LeadDetailPage() {
     updateLead.mutate({ id: lead.id, ...changes }, {
       onSuccess: () => {
         setEditing(false);
-        toast.success('Lead updated successfully', {
-          description: 'All changes have been saved to the database.',
-        });
-        createActivity.mutate({
-          entityType: 'lead', 
-          entityId: lead.id,
-          activityType: 'update',
-          title: 'Lead information updated',
-          description: `Updated fields: ${Object.keys(changes).join(', ')}`,
-        });
       },
-      onError: () => {
-        toast.error('Failed to update lead', {
-          description: 'Please try again or contact support if the issue persists.',
-        });
-      }
     });
   };
 
   const handleConvertToDeal = () => {
     convertLeadToDeal.mutate(lead.id, {
-      onSuccess: (deal) => {
-        toast.success('Lead converted to deal successfully', {
-          description: 'The lead has been moved to your deals pipeline.',
-        });
-        navigate(`/crm/deals/${deal.id}`);
+      onSuccess: (data: any) => {
+        navigate(`/crm/deals/${data.dealId || data.id}`);
       },
-      onError: () => {
-        toast.error('Failed to convert lead to deal', {
-          description: 'Please try again or contact support.',
-        });
-      }
     });
   };
 
   const handleDelete = () => {
     deleteLead.mutate(lead.id, {
       onSuccess: () => {
-        toast.success('Lead deleted successfully');
         navigate('/crm/leads');
       },
-      onError: () => {
-        toast.error('Failed to delete lead');
-      }
     });
   };
 
@@ -342,7 +321,6 @@ export default function LeadDetailPage() {
       updateLead.mutate({ id: lead.id, stage: newStage }, {
         onSuccess: () => {
           const stageName = pipelineStages.find(s => s.id === newStage)?.label || newStage;
-          toast.success(`Lead moved to ${stageName}`);
           createActivity.mutate({
             entityType: 'lead', 
             entityId: lead.id,
@@ -362,7 +340,7 @@ export default function LeadDetailPage() {
     toast.success(`${label} copied to clipboard`);
   };
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-primary/5 to-indigo-50">
       {/* Enterprise Header with Breadcrumb Navigation */}
       <div className="bg-white border-b border-slate-200 shadow-sm">
         <div className="px-6 py-4">
@@ -376,23 +354,23 @@ export default function LeadDetailPage() {
           </nav>
 
           {/* Header Content */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center gap-6">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => navigate("/crm/leads")}
-                className="gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                className="gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 self-start md:self-auto"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Leads
               </Button>
               
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div className="relative">
                   <Avatar className="h-14 w-14 ring-4 ring-white shadow-lg">
                     <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${lead.title}`} />
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-lg">
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white font-bold text-lg">
                       {lead.title?.split(' ').map(n => n[0]).join('').toUpperCase() || 'L'}
                     </AvatarFallback>
                   </Avatar>
@@ -400,14 +378,14 @@ export default function LeadDetailPage() {
                 </div>
                 
                 <div>
-                  <div className="flex items-center gap-3 mb-1">
-                    <h1 className="text-2xl font-bold text-slate-900">{lead.title}</h1>
-                    <Badge className={cn("gap-1 px-3 py-1 font-medium", getStatusColor(lead.status))}>
+                  <div className="flex flex-wrap items-center gap-3 mb-1">
+                    <h1 className="text-xl md:text-2xl font-bold text-slate-900 break-words max-w-[200px] sm:max-w-none">{lead.title}</h1>
+                    <Badge className={cn("gap-1 px-3 py-1 font-medium whitespace-nowrap", getStatusColor(lead.status))}>
                       {getStatusIcon(lead.status)}
                       {lead.status || 'New Lead'}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-6 text-sm">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                     <div className="flex items-center gap-2 text-slate-600">
                       <Building2 className="h-4 w-4" />
                       <span className="font-medium">{lead.company_name || 'No Company'}</span>
@@ -419,7 +397,7 @@ export default function LeadDetailPage() {
                       </div>
                     )}
                     {lead.created_at && (
-                      <div className="flex items-center gap-1 text-slate-500">
+                      <div className="flex items-center gap-1 text-slate-500 whitespace-nowrap">
                         <CalendarIcon className="h-4 w-4" />
                         <span>Created {format(new Date(lead.created_at), 'MMM d, yyyy')}</span>
                       </div>
@@ -429,7 +407,7 @@ export default function LeadDetailPage() {
               </div>
             </div>
             {/* Professional Action Buttons */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {editing ? (
                 <>
                   <Button 
@@ -442,7 +420,7 @@ export default function LeadDetailPage() {
                   <Button 
                     onClick={handleSave} 
                     disabled={updateLead.isPending} 
-                    className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+                    className="gap-2 bg-primary hover:bg-primary/90 text-white shadow-lg"
                   >
                     <Save className="h-4 w-4" /> 
                     {updateLead.isPending ? 'Saving...' : 'Save Changes'}
@@ -452,20 +430,29 @@ export default function LeadDetailPage() {
                 <>
                   {/* Quick Action Buttons */}
                   {lead.phone && (
-                    <Button variant="outline" size="sm" className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50">
-                      <Phone className="h-4 w-4" />
-                      Call
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                      asChild
+                    >
+                      <a href={`tel:${lead.phone}`}>
+                        <Phone className="h-4 w-4" />
+                        Call
+                      </a>
                     </Button>
                   )}
                   {lead.email && (
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
-                      onClick={() => window.open(`mailto:${lead.email}`, '_blank')}
+                      className="gap-2 text-primary border-primary/20 hover:bg-primary/5"
+                      asChild
                     >
-                      <Mail className="h-4 w-4" />
-                      Email
+                      <a href={`mailto:${lead.email}`}>
+                        <Mail className="h-4 w-4" />
+                        Email
+                      </a>
                     </Button>
                   )}
                   
@@ -478,13 +465,22 @@ export default function LeadDetailPage() {
                     Edit Lead
                   </Button>
                   
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-lg">
-                        <ArrowRightLeft className="h-4 w-4" /> 
-                        Convert to Deal
-                      </Button>
-                    </AlertDialogTrigger>
+                  {lead.status === 'converted' || lead.converted_to_deal_id ? (
+                    <Button 
+                      className="gap-2 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 shadow-sm"
+                      onClick={() => navigate(`/crm/deals/${lead.converted_to_deal_id || ''}`)}
+                    >
+                      <Target className="h-4 w-4 text-emerald-600" />
+                      View Converted Deal
+                    </Button>
+                  ) : (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-lg">
+                          <ArrowRightLeft className="h-4 w-4" /> 
+                          Convert to Deal
+                        </Button>
+                      </AlertDialogTrigger>
                     <AlertDialogContent className="max-w-md">
                       <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
@@ -507,6 +503,7 @@ export default function LeadDetailPage() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  )}
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -581,23 +578,26 @@ export default function LeadDetailPage() {
             </div>
           </div>
         </div>
-        {/* Enterprise Pipeline Progress Tracker */}
-        <div className="px-6 pb-6">
-          <div className="bg-gradient-to-r from-slate-50 to-blue-50 rounded-xl p-6 border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">Lead Progress Pipeline</h3>
-                <p className="text-sm text-slate-600">Track your lead through the sales process</p>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-slate-500">Progress</div>
-                <div className="text-lg font-bold text-slate-900">
-                  {Math.round(((pipelineStages.findIndex(s => s.id === (form.stage || lead.stage)) + 1) / pipelineStages.length) * 100)}%
-                </div>
+      </div>
+      
+      {/* Enterprise Pipeline Progress Tracker */}
+      <div className="px-6 pb-6">
+        <div className="bg-gradient-to-r from-slate-50 to-primary/5 rounded-xl p-6 border border-slate-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Lead Progress Pipeline</h3>
+              <p className="text-sm text-slate-600">Track your lead through the sales process</p>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-slate-500">Progress</div>
+              <div className="text-lg font-bold text-slate-900">
+                {Math.round(((pipelineStages.findIndex(s => s.id === (form.stage || lead.stage)) + 1) / pipelineStages.length) * 100)}%
               </div>
             </div>
+          </div>
             
-            <div className="flex gap-3">
+            <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200">
+              <div className="flex gap-3 min-w-[800px] md:min-w-0">
               {pipelineStages.map((stage, index) => {
                 const isActive = (form.stage || lead.stage) === stage.id;
                 const isPassed = pipelineStages.findIndex(s => s.id === (form.stage || lead.stage)) > index;
@@ -653,22 +653,22 @@ export default function LeadDetailPage() {
         </div>
       </div>
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column - Lead Details */}
-          <div className="lg:col-span-3 space-y-8">
+          <div className="lg:col-span-8 space-y-8">
             {/* Enterprise Metrics Dashboard */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg">
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 shadow-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-500 rounded-lg shadow-lg">
+                    <div className="p-2 bg-primary rounded-lg shadow-lg">
                       <TrendingUp className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs text-blue-600 font-medium uppercase tracking-wide truncate">Lead Score</p>
-                      <p className="text-2xl font-bold text-blue-900">85<span className="text-sm">/100</span></p>
-                      <p className="text-xs text-blue-700 truncate">High Quality</p>
+                      <p className="text-xs text-primary font-medium uppercase tracking-wide truncate">Lead Score</p>
+                      <p className="text-2xl font-bold text-slate-900">85<span className="text-sm">/100</span></p>
+                      <p className="text-xs text-primary truncate">High Quality</p>
                     </div>
                   </div>
                 </CardContent>
@@ -711,9 +711,9 @@ export default function LeadDetailPage() {
             <div className="space-y-8">
               {/* Contact Information */}
               <Card className="shadow-xl border-0 bg-white">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 rounded-t-lg">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-indigo-50 border-b border-slate-200 rounded-t-lg">
                   <CardTitle className="flex items-center gap-3 text-xl">
-                    <div className="p-2 bg-blue-500 rounded-lg">
+                    <div className="p-2 bg-primary rounded-lg">
                       <User className="h-5 w-5 text-white" />
                     </div>
                     Contact Information
@@ -748,7 +748,7 @@ export default function LeadDetailPage() {
                           value={form.phone as string || ""}
                           onChange={(e) => set("phone", e.target.value)}
                           placeholder="+1 (555) 123-4567"
-                          className="h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                          className="h-10 border-gray-300 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                         />
                       ) : (
                         <div className="h-10 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 flex items-center">
@@ -804,6 +804,7 @@ export default function LeadDetailPage() {
                       value={form.company_phone as string} 
                       onChange={(v) => set("company_phone", v)} 
                       editing={editing}
+                      type="tel"
                       icon={<Phone className="h-4 w-4" />}
                     />
                     <Field 
@@ -996,14 +997,16 @@ export default function LeadDetailPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {lead.phone && (
-                  <Button variant="outline" className="w-full justify-start gap-4 h-14 text-left border-2 hover:border-emerald-300 hover:bg-emerald-50 transition-all">
-                    <div className="p-3 bg-emerald-100 rounded-xl">
-                      <Phone className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">Call Lead</p>
-                      <p className="text-sm text-slate-500">{lead.phone}</p>
-                    </div>
+                  <Button variant="outline" className="w-full justify-start p-0 h-14 text-left border-2 hover:border-emerald-300 hover:bg-emerald-50 transition-all" asChild>
+                    <a href={`tel:${lead.phone}`} className="flex items-center gap-4 w-full h-full px-4">
+                      <div className="p-3 bg-emerald-100 rounded-xl">
+                        <Phone className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">Call Lead</p>
+                        <p className="text-sm text-slate-500">{lead.phone}</p>
+                      </div>
+                    </a>
                   </Button>
                 )}
                 

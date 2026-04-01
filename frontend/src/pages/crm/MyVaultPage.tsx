@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/crm/ui/EmptyState";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useVaultDocuments, useDeleteDocument } from "@/hooks/useDocuments";
 import { UploadDocumentDialog } from "@/components/documents/UploadDocumentDialog";
+import { useCustomDialog } from "@/contexts/DialogContext";
 import { format, isAfter, addDays } from "date-fns";
 import { 
   Plus, 
@@ -47,6 +48,7 @@ export default function MyVaultPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const { confirm } = useCustomDialog();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -104,8 +106,8 @@ export default function MyVaultPage() {
     return signers;
   };
 
-  const handleDelete = (docId: string) => {
-    if (confirm('Are you sure you want to delete this document from the vault?')) {
+  const handleDelete = async (docId: string) => {
+    if (await confirm('Are you sure you want to delete this document from the vault?', { variant: 'destructive', title: 'Delete Document' })) {
       deleteDocument.mutate(docId);
     }
   };

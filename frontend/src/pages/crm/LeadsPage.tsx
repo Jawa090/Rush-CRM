@@ -16,12 +16,13 @@ import { DataToolbar } from "@/components/crm/ui/DataToolbar";
 import { EntityTable, EntityColumn } from "@/components/crm/ui/EntityTable";
 import { EmptyState } from "@/components/crm/ui/EmptyState";
 import { AdvancedSearch } from "@/components/crm/ui/AdvancedSearch";
+import { useCustomDialog } from "@/contexts/DialogContext";
 import { toast } from "sonner";
 
 const statusTone = (status?: string) => {
   const s = (status || "").toLowerCase();
   if (s === "qualified") return "bg-emerald-500/10 text-emerald-700 border-emerald-200";
-  if (s === "contacted") return "bg-sky-500/10 text-sky-700 border-sky-200";
+  if (s === "contacted") return "bg-primary/10 text-primary border-primary/20";
   if (s === "unqualified") return "bg-rose-500/10 text-rose-700 border-rose-200";
   return "bg-amber-500/10 text-amber-700 border-amber-200";
 };
@@ -48,6 +49,7 @@ export default function LeadsPage() {
   const [status, setStatus] = useState("all");
   const [type, setType] = useState("all");
   const [workspaceFilter, setWorkspaceFilter] = useState("all");
+  const { confirm } = useCustomDialog();
   const [sortBy, setSortBy] = useState("recent");
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
@@ -137,7 +139,7 @@ export default function LeadsPage() {
   const handleBulkDelete = async () => {
     if (selectedLeads.length === 0) return;
     
-    if (confirm(`Are you sure you want to delete ${selectedLeads.length} leads?`)) {
+    if (await confirm(`Are you sure you want to delete ${selectedLeads.length} leads?`, { variant: 'destructive', title: 'Confirm Bulk Deletion' })) {
       try {
         for (const leadId of selectedLeads) {
           await deleteLead.mutateAsync(leadId);
@@ -145,7 +147,7 @@ export default function LeadsPage() {
         setSelectedLeads([]);
         toast.success(`${selectedLeads.length} leads deleted successfully`);
       } catch (error) {
-        toast.error('Failed to delete leads');
+        // Mutations handle their own error toasts
       }
     }
   };
@@ -182,10 +184,12 @@ export default function LeadsPage() {
       key: "select",
       header: "",
       render: (lead) => (
-        <Checkbox
-          checked={selectedLeads.includes(lead.id)}
-          onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={selectedLeads.includes(lead.id)}
+            onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
+          />
+        </div>
       ),
     },
     {
@@ -201,7 +205,14 @@ export default function LeadsPage() {
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground flex items-center gap-2">
-            <Mail className="h-3 w-3" /> {lead.email || "—"}
+            <Mail className="h-3 w-3" /> 
+            {lead.email ? (
+              <a href={`mailto:${lead.email}`} className="hover:text-primary hover:underline transition-colors" onClick={(e) => e.stopPropagation()}>
+                {lead.email}
+              </a>
+            ) : (
+              "—"
+            )}
           </p>
         </div>
       ),
@@ -239,7 +250,13 @@ export default function LeadsPage() {
       render: (lead) => (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Phone className="h-4 w-4" />
-          {lead.phone || "—"}
+          {lead.phone ? (
+            <a href={`tel:${lead.phone}`} className="hover:text-primary hover:underline transition-colors" onClick={(e) => e.stopPropagation()}>
+              {lead.phone}
+            </a>
+          ) : (
+            "—"
+          )}
         </div>
       ),
     },
@@ -257,31 +274,38 @@ export default function LeadsPage() {
       key: "actions",
       header: "",
       render: (lead) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => navigate(`/crm/leads/${lead.id}`)}>
-              <Eye className="h-4 w-4 mr-2" />
-              View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/crm/leads/${lead.id}/edit`)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Lead
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => deleteLead.mutate(lead.id)}
-              className="text-red-600"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div onClick={(e) => e.stopPropagation()}>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate(`/crm/leads/${lead.id}`)}>
+                <Eye className="h-4 w-4 mr-2" />
+                View Details
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/crm/leads/${lead.id}/edit`)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Lead
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (await confirm('Are you sure you want to delete this lead?', { variant: 'destructive', title: 'Delete Lead' })) {
+                    deleteLead.mutate(lead.id);
+                  }
+                }}
+                className="text-red-600"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
     },
   ];
@@ -378,7 +402,7 @@ export default function LeadsPage() {
           <WorkspaceFilter 
             value={workspaceFilter} 
             onChange={setWorkspaceFilter}
-            className="border-blue-200 bg-blue-50"
+            className="border-primary/20 bg-primary/5"
           />
           <Button variant="outline" size="sm" onClick={() => { setType("all"); setWorkspaceFilter("all"); }}>
             Reset Filters

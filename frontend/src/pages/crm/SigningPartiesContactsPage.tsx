@@ -1,10 +1,22 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, Sparkles, Mail, Phone, Clock3 } from "lucide-react";
-import { useContacts } from "@/hooks/useCrmData";
+import { 
+  Plus, 
+  Sparkles, 
+  Mail, 
+  Phone, 
+  Clock3, 
+  Building2, 
+  Download, 
+  Users, 
+  AlertCircle, 
+  Loader2,
+  Filter
+} from "lucide-react";
+import { useSigningParties } from "@/hooks/useCrmData";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/crm/ui/PageHeader";
 import { DataToolbar } from "@/components/crm/ui/DataToolbar";
 import { EntityTable, EntityColumn } from "@/components/crm/ui/EntityTable";
@@ -19,6 +31,7 @@ const tabs = [
 type ContactRow = {
   id: string;
   name: string;
+  company: string;
   title?: string;
   phone?: string;
   email?: string;
@@ -29,30 +42,29 @@ type ContactRow = {
 export default function SigningPartiesContactsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [search, setSearch] = useState("");
-  const [source, setSource] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
 
-  const { data, isLoading, isError } = useContacts() as { data?: any; isLoading: boolean; isError: boolean };
+  const { data, isLoading, isError } = useSigningParties() as { data?: any[]; isLoading: boolean; isError: boolean };
 
   const contacts = useMemo(() => {
-    const payload = data as any;
-    if (!payload) return [] as any[];
-    if (Array.isArray(payload)) return payload;
-    return payload.data ?? [];
+    const dataArray = (data as any)?.data || data || [];
+    return Array.isArray(dataArray) ? dataArray : [];
   }, [data]);
 
   const rows: ContactRow[] = useMemo(() => {
-    const term = search.toLowerCase();
+    const term = searchQuery.toLowerCase();
     return contacts
       .filter((c: any) => {
         const fullName = `${c.first_name || ""} ${c.last_name || ""}`.trim().toLowerCase();
         const matchesSearch = term
           ? fullName.includes(term) ||
             (c.email || "").toLowerCase().includes(term) ||
-            (c.phone || "").toLowerCase().includes(term)
+            (c.phone || "").toLowerCase().includes(term) ||
+            (c.company_name || "").toLowerCase().includes(term)
           : true;
-        const matchesSource = source === "all" || (c.source || "").toLowerCase() === source;
+        const matchesSource = sourceFilter === "all" || (c.source || "").toLowerCase() === sourceFilter.toLowerCase();
         return matchesSearch && matchesSource;
       })
       .sort((a: any, b: any) => {
@@ -61,14 +73,15 @@ export default function SigningPartiesContactsPage() {
       })
       .map((c: any) => ({
         id: c.id,
+        company: c.company_name || "—",
         name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || c.full_name || "Unnamed",
         title: c.title || c.position,
         phone: c.phone,
         email: c.email,
         source: c.source,
-        lastActivity: c.last_activity || c.activity,
+        lastActivity: c.last_activity || "No recent activity",
       }));
-  }, [contacts, search, source, sortBy]);
+  }, [contacts, searchQuery, sourceFilter, sortBy]);
 
   const columns: EntityColumn<ContactRow>[] = [
     {
@@ -79,11 +92,21 @@ export default function SigningPartiesContactsPage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="font-semibold">{c.name}</span>
-            {c.title && <Badge variant="outline" className="bg-muted/40">{c.title}</Badge>}
+            {c.title && <Badge variant="outline" className="bg-muted/40 font-normal">{c.title}</Badge>}
           </div>
           <p className="text-xs text-muted-foreground flex items-center gap-2">
-            <Mail className="h-3 w-3" /> {c.email || "—"}
+            <Mail className="h-3.5 w-3.5" /> {c.email || "—"}
           </p>
+        </div>
+      ),
+    },
+    {
+      key: "company",
+      header: "Company",
+      render: (c) => (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Building2 className="h-4 w-4" />
+          {c.company}
         </div>
       ),
     },
@@ -101,15 +124,19 @@ export default function SigningPartiesContactsPage() {
       key: "source",
       header: "Source",
       sortable: true,
-      render: (c) => <span className="text-sm text-muted-foreground">{c.source || "—"}</span>,
+      render: (c) => (
+        <Badge variant="outline" className="text-xs font-normal capitalize">
+          {c.source || "Direct"}
+        </Badge>
+      ),
     },
     {
       key: "lastActivity",
       header: "Last activity",
       render: (c) => (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock3 className="h-4 w-4" />
-          {c.lastActivity || "—"}
+          <Clock3 className="h-4 w-4 text-muted-foreground/60" />
+          {c.lastActivity}
         </div>
       ),
     },
@@ -117,13 +144,13 @@ export default function SigningPartiesContactsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         {tabs.map((tab) => (
           <Button
             key={tab.path}
             variant={location.pathname === tab.path ? "secondary" : "ghost"}
             size="sm"
-            className="rounded-full"
+            className="rounded-full transition-all duration-300 hover:bg-secondary/80 shadow-sm"
             onClick={() => navigate(tab.path)}
           >
             {tab.label}
@@ -133,76 +160,95 @@ export default function SigningPartiesContactsPage() {
 
       <PageHeader
         title="Signing party contacts"
-        description="Link and manage all contacts used for signing workflows."
+        description="Manage your signing parties and their contact information"
         meta={[
-          { label: "Total", value: contacts.length, tone: "info" },
-          { label: "Filtered", value: rows.length, tone: "success" },
+          { label: "Total Contacts", value: rows.length, tone: rows.length > 0 ? "info" : "default" },
+          { label: "Active Organizations", value: new Set(rows.map(r => r.company).filter(c => c !== "—")).size, tone: "success" },
         ]}
         actions={
-          <Button className="gradient-primary" onClick={() => navigate("/crm/customers/signing-parties/contacts/create")}>
-            <Plus className="mr-2 h-4 w-4" /> New signing contact
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="hidden sm:flex border-primary/20 hover:bg-primary/5">
+              <Download className="mr-2 h-4 w-4 text-primary" /> Export
+            </Button>
+            <Button 
+              className="gradient-primary shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all active:scale-95" 
+              onClick={() => navigate("/crm/customers/signing-parties/contacts/create")}
+            >
+              <Plus className="mr-2 h-4 w-4" /> New signing contact
+            </Button>
+          </div>
         }
       />
 
-      <DataToolbar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Search name, email, phone"
-        filters={[
-          {
-            label: "Source",
-            value: source,
-            onChange: setSource,
-            options: [
-              { label: "All sources", value: "all" },
-              { label: "Web", value: "web" },
-              { label: "Referral", value: "referral" },
-              { label: "Email", value: "email" },
-              { label: "Event", value: "event" },
-            ],
-          },
-        ]}
-        sortValue={sortBy}
-        sortOptions={[
-          { label: "Recent", value: "recent" },
-          { label: "Name", value: "name" },
-        ]}
-        onSortChange={setSortBy}
-      >
-        <Button variant="outline" size="sm" onClick={() => { setSearch(""); setSource("all"); }}>
-          Reset
-        </Button>
-      </DataToolbar>
-
-      <Card className="border-0 shadow-card">
-        <CardContent className="p-4 lg:p-6">
-          <EntityTable
-            data={rows}
-            columns={columns}
-            isLoading={isLoading}
-            pageSize={10}
-            emptyState={
-              <EmptyState
-                title="No signing contacts yet"
-                description="Create a contact to attach to agreements and deals."
-                actionLabel="Add contact"
-                onAction={() => navigate("/crm/customers/signing-parties/contacts/create")}
-                icon={<Sparkles className="h-6 w-6" />}
-              />
-            }
-            onRowClick={(row) => navigate(`/crm/customers/contacts/${row.id}`)}
+      <Card className="border-none shadow-xl bg-card/50 backdrop-blur-sm overflow-hidden">
+        <CardHeader className="pb-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 tracking-tight">Active Contacts</CardTitle>
+          </div>
+          <CardDescription>View and manage all your signing contacts in one place</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0 sm:p-6 pt-6">
+          <DataToolbar
+            search={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder="Search signing contacts..."
+            filters={[
+              {
+                label: "Source",
+                value: sourceFilter,
+                onChange: setSourceFilter,
+                options: [
+                  { label: "All sources", value: "all" },
+                  { label: "Web", value: "web" },
+                  { label: "Referral", value: "referral" },
+                  { label: "Email", value: "email" },
+                  { label: "Event", value: "event" },
+                ],
+              },
+            ]}
           />
+
+          <div className="mt-4 rounded-xl border bg-background/50 overflow-hidden shadow-inner">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-10 w-10 animate-spin text-primary/60" />
+                <span className="ml-3 text-lg font-medium text-muted-foreground">Loading contacts...</span>
+              </div>
+            ) : isError ? (
+              <div className="text-center py-20 bg-destructive/5 mx-4 my-4 rounded-xl border border-destructive/20">
+                <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+                <h3 className="text-lg font-bold text-destructive">Connection failed</h3>
+                <p className="text-muted-foreground mt-2">Could not retrieve contacts. Please try again later.</p>
+                <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
+                  Retry Connection
+                </Button>
+              </div>
+            ) : rows.length === 0 ? (
+              <EmptyState 
+                title={searchQuery || sourceFilter !== "all" ? "No results found" : "No signing contacts yet"}
+                description={searchQuery || sourceFilter !== "all" ? "Try adjusting your search or filters to find what you're looking for." : "Start building your client database by adding your first signing contact."}
+                actionLabel={searchQuery || sourceFilter !== "all" ? "Reset filters" : "Create first contact"}
+                onAction={() => {
+                  if (searchQuery || sourceFilter !== "all") {
+                    setSearchQuery("");
+                    setSourceFilter("all");
+                  } else {
+                    navigate("/crm/customers/signing-parties/contacts/create");
+                  }
+                }}
+                icon={searchQuery || sourceFilter !== "all" ? <Filter className="h-12 w-12 text-muted-foreground/40" /> : <Users className="h-12 w-12 text-primary/40" />}
+                className="py-32"
+              />
+            ) : (
+              <EntityTable
+                columns={columns}
+                data={rows}
+                onRowClick={(row) => navigate(`/crm/customers/contacts/${row.id}`)}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
-
-      {isError && (
-        <Card>
-          <CardContent className="p-6">
-            <EmptyState title="Failed to load contacts" description="Check connection and try again." muted />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

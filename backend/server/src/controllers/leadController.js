@@ -14,8 +14,11 @@ const mapStatusToFrontend = (status) => {
     'converted': 'qualified',
     'in_progress': 'contacted',
     'progress': 'contacted',
+    'proposal': 'proposal',
+    'negotiation': 'negotiation',
+    'proposal_sent': 'proposal',
   };
-  return statusMap[status] || 'new';
+  return statusMap[status] || (status || 'new');
 };
 
 // Map frontend status/stage values to database values
@@ -25,6 +28,8 @@ const mapStatusToDatabase = (status) => {
     'contacted': 'contacted',
     'qualified': 'qualified',
     'unqualified': 'unqualified',
+    'proposal': 'proposal',
+    'negotiation': 'negotiation',
   };
   return statusMap[status] || status;
 };
@@ -59,6 +64,8 @@ const createLeadSchema = Joi.object({
   interactionNotes: Joi.string().optional().allow(null, ''),
   firstMessage: Joi.string().optional().allow(null, ''),
   lastTouch: Joi.date().optional().allow(null),
+  pipeline: Joi.string().optional().allow(null, ''),
+  externalSourceId: Joi.string().optional().allow(null, ''),
 });
 
 const normalizeLeadInput = (body = {}) => {
@@ -67,49 +74,54 @@ const normalizeLeadInput = (body = {}) => {
     : Number(body.value);
 
   const expectedRaw = body.expectedCloseDate ?? body.expected_close_date;
-  const expectedCloseDate = expectedRaw === '' || expectedRaw === null || expectedRaw === undefined
+  const expectedCloseDate = expectedRaw === '' || expectedRaw === null
     ? null
     : expectedRaw;
 
   const lastTouchRaw = body.lastTouch ?? body.last_touch;
-  const lastTouch = lastTouchRaw === '' || lastTouchRaw === null || lastTouchRaw === undefined
+  const lastTouch = lastTouchRaw === '' || lastTouchRaw === null
     ? null
     : lastTouchRaw;
 
-  // Ensure both title and name are set - they're both NOT NULL in the database
-  const titleValue = body.title ?? body.name;
-  const nameValue = body.name ?? body.title;
+  // Use undefined for fields NOT present in body to avoid wiping them during UPDATE
+  const getVal = (camel, snake) => {
+    if (body[camel] !== undefined) return body[camel];
+    if (body[snake] !== undefined) return body[snake];
+    return undefined;
+  };
 
   return {
-    title: titleValue,
-    name: nameValue,
-    stage: body.stage ?? body.status ?? 'new',
-    status: body.status ?? body.stage ?? 'new',
-    source: body.source ?? null,
+    title: getVal('title', 'name') ?? getVal('name', 'title'),
+    name: getVal('name', 'title') ?? getVal('title', 'name'),
+    stage: getVal('stage', 'status'),
+    status: getVal('status', 'stage'),
+    source: getVal('source', 'source'),
     value: Number.isNaN(valueNumber) ? undefined : valueNumber,
-    currency: body.currency ?? body.currency_code ?? 'USD',
-    priority: body.priority ?? 'medium',
-    notes: body.notes ?? null,
-    tags: body.tags ?? body.labels ?? undefined,
+    currency: getVal('currency', 'currency_code'),
+    priority: getVal('priority', 'priority'),
+    notes: getVal('notes', 'notes'),
+    tags: getVal('tags', 'labels'),
     expectedCloseDate,
-    contactId: body.contactId ?? body.contact_id ?? null,
-    companyId: body.companyId ?? body.company_id ?? null,
-    // Marketing fields with snake_case to camelCase conversion
-    designation: body.designation ?? null,
-    phone: body.phone ?? null,
-    email: body.email ?? null,
-    website: body.website ?? null,
-    address: body.address ?? null,
-    companyName: body.companyName ?? body.company_name ?? null,
-    companyPhone: body.companyPhone ?? body.company_phone ?? null,
-    companyEmail: body.companyEmail ?? body.company_email ?? null,
-    companySize: body.companySize ?? body.company_size ?? null,
-    agentName: body.agentName ?? body.agent_name ?? null,
-    decisionMaker: body.decisionMaker ?? body.decision_maker ?? null,
-    serviceInterested: body.serviceInterested ?? body.service_interested ?? null,
-    interactionNotes: body.interactionNotes ?? body.interaction_notes ?? null,
-    firstMessage: body.firstMessage ?? body.first_message ?? null,
+    contactId: getVal('contactId', 'contact_id'),
+    companyId: getVal('companyId', 'company_id'),
+    // Marketing fields
+    designation: getVal('designation', 'designation'),
+    phone: getVal('phone', 'phone'),
+    email: getVal('email', 'email'),
+    website: getVal('website', 'website'),
+    address: getVal('address', 'address'),
+    companyName: getVal('companyName', 'company_name'),
+    companyPhone: getVal('companyPhone', 'company_phone'),
+    companyEmail: getVal('companyEmail', 'company_email'),
+    companySize: getVal('companySize', 'company_size'),
+    agentName: getVal('agentName', 'agent_name'),
+    decisionMaker: getVal('decisionMaker', 'decision_maker'),
+    serviceInterested: getVal('serviceInterested', 'service_interested'),
+    interactionNotes: getVal('interactionNotes', 'interaction_notes'),
+    firstMessage: getVal('firstMessage', 'first_message'),
     lastTouch,
+    pipeline: getVal('pipeline', 'pipeline'),
+    externalSourceId: getVal('externalSourceId', 'external_source_id'),
   };
 };
 
@@ -144,6 +156,8 @@ const updateLeadSchema = Joi.object({
   interactionNotes: Joi.string().optional().allow(null, ''),
   firstMessage: Joi.string().optional().allow(null, ''),
   lastTouch: Joi.date().optional().allow(null),
+  pipeline: Joi.string().optional().allow(null, ''),
+  externalSourceId: Joi.string().optional().allow(null, ''),
 }).min(1);
 
 const getAll = async (req, res, next) => {
@@ -153,8 +167,8 @@ const getAll = async (req, res, next) => {
 
     let query = `
       SELECT l.*, 
-             c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email,
-             co.name as company_name,
+             c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.phone as contact_phone,
+             co.name as linked_company_name, co.email as linked_company_email, co.phone as linked_company_phone,
              w.name as workspace_name
       FROM public.leads l
       LEFT JOIN public.contacts c ON c.id = l.contact_id
@@ -262,10 +276,14 @@ const getAll = async (req, res, next) => {
     res.json({
       data: result.rows.map(lead => ({
         ...lead,
-        // Ensure consistent field names for frontend
-        name: lead.title || lead.name,
-        title: lead.title || lead.name,
-        company: lead.company_name || lead.company,
+        // Ensure consistent field names for frontend - prioritize linked entities but fallback to lead's own fields
+        company: lead.linked_company_name || lead.company_name || lead.company,
+        companyName: lead.linked_company_name || lead.company_name || lead.company,
+        companyPhone: lead.linked_company_phone || lead.company_phone,
+        companyEmail: lead.linked_company_email || lead.company_email,
+        contactName: lead.contact_first_name ? `${lead.contact_first_name} ${lead.contact_last_name || ''}`.trim() : lead.name,
+        contactEmail: lead.contact_email || lead.email,
+        contactPhone: lead.contact_phone || lead.phone,
         // Map database status/stage to frontend expected values
         status: mapStatusToFrontend(lead.status),
         stage: mapStatusToFrontend(lead.stage),
@@ -274,6 +292,8 @@ const getAll = async (req, res, next) => {
         // Format dates
         createdAt: lead.created_at,
         updatedAt: lead.updated_at,
+        converted_to_deal_id: lead.converted_to_deal_id,
+        converted_at: lead.converted_at,
       })),
       pagination: {
         total: parseInt(countResult.rows[0].count),
@@ -296,7 +316,7 @@ const getById = async (req, res, next) => {
       result = await db.query(
         `SELECT l.*,
                 c.id as contact_id, c.first_name as contact_first_name, c.last_name as contact_last_name, c.email as contact_email, c.phone as contact_phone,
-                co.id as company_id, co.name as company_name, co.email as company_email, co.phone as company_phone
+                co.id as company_id, co.name as linked_company_name, co.email as linked_company_email, co.phone as linked_company_phone
          FROM public.leads l
          LEFT JOIN public.contacts c ON c.id = l.contact_id
          LEFT JOIN public.companies co ON co.id = l.company_id
@@ -323,9 +343,13 @@ const getById = async (req, res, next) => {
     res.json({
       ...lead,
       // Ensure consistent field names for frontend
-      name: lead.title || lead.name,
-      title: lead.title || lead.name,
-      company: lead.company_name || lead.company,
+      company: lead.linked_company_name || lead.company_name || lead.company,
+      companyName: lead.linked_company_name || lead.company_name || lead.company,
+      companyPhone: lead.linked_company_phone || lead.company_phone,
+      companyEmail: lead.linked_company_email || lead.company_email,
+      contactName: lead.contact_first_name ? `${lead.contact_first_name} ${lead.contact_last_name || ''}`.trim() : lead.name,
+      contactEmail: lead.contact_email || lead.email,
+      contactPhone: lead.contact_phone || lead.phone,
       // Map database status/stage to frontend expected values
       status: mapStatusToFrontend(lead.status),
       stage: mapStatusToFrontend(lead.stage),
@@ -334,6 +358,8 @@ const getById = async (req, res, next) => {
       // Format dates
       createdAt: lead.created_at,
       updatedAt: lead.updated_at,
+      converted_to_deal_id: lead.converted_to_deal_id,
+      converted_at: lead.converted_at,
     });
   } catch (err) {
     next(err);
@@ -379,15 +405,15 @@ const create = async (req, res, next) => {
           notes, tags, expected_close_date, contact_id, company_id,
           designation, phone, email, website, address, company_name, company_phone,
           company_email, company_size, agent_name, decision_maker, service_interested,
-          interaction_notes, first_message, last_touch)
+          interaction_notes, first_message, last_touch, pipeline, external_source_id)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-                 $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+                 $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
          RETURNING *`,
         [req.user.orgId, req.user.id, workspaceId, title, name, stage, status, source, leadValue, 
          currency, priority, notes, tags, expectedCloseDate, contactId, companyId,
          designation, phone, email, website, address, companyName, companyPhone,
          companyEmail, companySize, agentName, decisionMaker, serviceInterested,
-         interactionNotes, firstMessage, lastTouch]
+         interactionNotes, firstMessage, lastTouch, value.pipeline, value.externalSourceId]
       );
     } catch (err) {
       if (err.code === '42703') {
@@ -425,9 +451,13 @@ const create = async (req, res, next) => {
     res.status(201).json({
       ...lead,
       // Ensure consistent field names for frontend
-      name: lead.title || lead.name,
-      title: lead.title || lead.name,
-      company: lead.company_name || lead.company,
+      company: lead.linked_company_name || lead.company_name || lead.company,
+      companyName: lead.linked_company_name || lead.company_name || lead.company,
+      companyPhone: lead.linked_company_phone || lead.company_phone,
+      companyEmail: lead.linked_company_email || lead.company_email,
+      contactName: lead.contact_first_name ? `${lead.contact_first_name} ${lead.contact_last_name || ''}`.trim() : lead.name,
+      contactEmail: lead.contact_email || lead.email,
+      contactPhone: lead.contact_phone || lead.phone,
       // Map database status/stage to frontend expected values
       status: mapStatusToFrontend(lead.status),
       stage: mapStatusToFrontend(lead.stage),
@@ -479,6 +509,24 @@ const update = async (req, res, next) => {
       companyId: 'company_id',
       assignedTo: 'assigned_to',
       expectedCloseDate: 'expected_close_date',
+      workspaceId: 'workspace_id',
+      designation: 'designation',
+      phone: 'phone',
+      email: 'email',
+      website: 'website',
+      address: 'address',
+      companyName: 'company_name',
+      companyPhone: 'company_phone',
+      companyEmail: 'company_email',
+      companySize: 'company_size',
+      agentName: 'agent_name',
+      decisionMaker: 'decision_maker',
+      serviceInterested: 'service_interested',
+      interactionNotes: 'interaction_notes',
+      firstMessage: 'first_message',
+      lastTouch: 'last_touch',
+      pipeline: 'pipeline',
+      externalSourceId: 'external_source_id'
     };
 
     for (const [key, val] of Object.entries(value)) {
@@ -524,10 +572,14 @@ const update = async (req, res, next) => {
     const lead = result.rows[0];
     res.json({
       ...lead,
-      // Ensure consistent field names for frontend
-      name: lead.title || lead.name,
-      title: lead.title || lead.name,
-      company: lead.company_name || lead.company,
+      // Ensure consistent field names for frontend - prioritize linked entities but fallback to lead's own fields
+      company: lead.linked_company_name || lead.company_name || lead.company,
+      companyName: lead.linked_company_name || lead.company_name || lead.company,
+      companyPhone: lead.linked_company_phone || lead.company_phone,
+      companyEmail: lead.linked_company_email || lead.company_email,
+      contactName: lead.contact_first_name ? `${lead.contact_first_name} ${lead.contact_last_name || ''}`.trim() : lead.name,
+      contactEmail: lead.contact_email || lead.email,
+      contactPhone: lead.contact_phone || lead.phone,
       // Map database status/stage to frontend expected values
       status: mapStatusToFrontend(lead.status),
       stage: mapStatusToFrontend(lead.stage),
@@ -610,8 +662,23 @@ const convertToDeal = async (req, res, next) => {
 
     const { rows: dealRows } = await db.query(
       `INSERT INTO public.deals 
-       (org_id, user_id, title, contact_id, company_id, stage, status, value, currency, probability, notes, tags, expected_close_date, converted_from_lead_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       (
+         org_id, user_id, title, contact_id, company_id, stage, status, 
+         value, currency, probability, notes, tags, expected_close_date, 
+         converted_from_lead_id, contact_name, company_name, phone, email, 
+         priority, source, description, designation, website, address, 
+         company_phone, company_email, company_size, agent_name, 
+         decision_maker, service_interested, interaction_notes, 
+         first_message, last_touch, workspace_id, source_info, 
+         phone_type, email_type, website_type, customer_type, 
+         last_contacted_date, next_follow_up_date, responsible_person
+       )
+       VALUES (
+         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+         $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26,
+         $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38,
+         $39, $40, $41, $42
+       )
        RETURNING *`,
       [
         req.user.orgId,
@@ -628,6 +695,34 @@ const convertToDeal = async (req, res, next) => {
         lead.tags,
         lead.expected_close_date,
         id,
+        lead.contact_name || lead.title || lead.name,
+        lead.company_name,
+        lead.phone,
+        lead.email,
+        lead.priority || 'medium',
+        lead.source,
+        lead.notes || lead.interaction_notes, // Description
+        lead.designation,
+        lead.website,
+        lead.address,
+        lead.company_phone,
+        lead.company_email,
+        lead.company_size,
+        lead.agent_name,
+        lead.decision_maker,
+        lead.service_interested,
+        lead.interaction_notes,
+        lead.first_message,
+        lead.last_touch,
+        lead.workspace_id,
+        lead.source_info,
+        lead.phone_type || 'work',
+        lead.email_type || 'work',
+        lead.website_type || 'corporate',
+        lead.customer_type,
+        lead.last_contacted_date,
+        lead.next_follow_up_date,
+        lead.responsible_person || lead.assigned_to
       ]
     );
 
@@ -648,9 +743,8 @@ const convertToDeal = async (req, res, next) => {
     res.status(201).json({
       ...deal,
       // Ensure consistent field names for frontend
-      name: deal.title || deal.name,
-      title: deal.title || deal.name,
-      company: deal.company_name || deal.company,
+      company: deal.linked_company_name || deal.company_name || deal.company,
+      companyName: deal.linked_company_name || deal.company_name || deal.company,
       // Ensure value is a number
       value: deal.value ? Number(deal.value) : 0,
       // Format dates

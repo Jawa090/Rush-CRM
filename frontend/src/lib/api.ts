@@ -391,6 +391,7 @@ export const workflowsApi = {
 export const activitiesApi = {
   getRecent: (limit?: number) => api.get<any[]>('/activities', limit ? { limit: String(limit) } : undefined),
   getByEntity: (entityType: string, entityId: string) => api.get<any[]>(`/activities/${entityType}/${entityId}`),
+  create: (data: any) => api.post<any>('/activities', data),
 };
 
 export const organizationApi = {

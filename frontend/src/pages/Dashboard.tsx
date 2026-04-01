@@ -49,7 +49,7 @@ const TASK_STATUS_ICON: Record<string, React.ElementType> = {
   todo: Circle, in_progress: Activity, in_review: Eye, done: CheckCircle2,
 };
 const TASK_STATUS_COLOR: Record<string, string> = {
-  todo: "text-slate-400", in_progress: "text-blue-500", in_review: "text-amber-500", done: "text-emerald-500",
+  todo: "text-slate-400", in_progress: "text-primary", in_review: "text-amber-500", done: "text-emerald-500",
 };
 
 export default function Dashboard() {
@@ -137,7 +137,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {/* CRM */}
         <div className="col-span-2 sm:col-span-2 lg:col-span-2">
-          <StatTile label="Total Leads" value={leadOverview?.total_leads ?? "—"} sub="all time" icon={UserPlus} color="bg-blue-500" onClick={() => navigate("/crm/leads")} />
+          <StatTile label="Total Leads" value={leadOverview?.total_leads ?? "—"} sub="all time" icon={UserPlus} color="bg-primary" onClick={() => navigate("/crm/leads")} />
         </div>
         <div className="col-span-2 sm:col-span-2 lg:col-span-2">
           <StatTile label="Open Deals" value={dealOverview?.open_deals ?? "—"} sub={`$${Number(dealOverview?.total_open_value || 0).toLocaleString()} pipeline`} icon={Handshake} color="bg-violet-500" onClick={() => navigate("/crm/deals")} />
@@ -312,7 +312,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-2">
               {[
                 { label: "Total Staff", value: hrmsStats?.totalEmployees ?? "—", color: "text-foreground" },
-                { label: "On Leave", value: hrmsStats?.approvedLeaves ?? "—", color: "text-blue-600" },
+                { label: "On Leave", value: hrmsStats?.approvedLeaves ?? "—", color: "text-primary" },
                 { label: "Pending Leaves", value: hrmsStats?.pendingLeaves ?? "—", color: "text-orange-500" },
                 { label: "Avg Hours", value: hrmsStats?.averageWorkHours ? `${hrmsStats.averageWorkHours.toFixed(1)}h` : "—", color: "text-muted-foreground" },
               ].map((s) => (
@@ -339,7 +339,7 @@ export default function Dashboard() {
             const initials = a.user_name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2) ?? "?";
             const badge = a.entity_type || a.activity_type || "activity";
             const BADGE_COLORS: Record<string, string> = {
-              lead: "bg-blue-50 text-blue-700 border-blue-200",
+              lead: "bg-primary/5 text-primary border-primary/20",
               deal: "bg-emerald-50 text-emerald-700 border-emerald-200",
               contact: "bg-violet-50 text-violet-700 border-violet-200",
               task: "bg-slate-50 text-slate-600 border-slate-200",

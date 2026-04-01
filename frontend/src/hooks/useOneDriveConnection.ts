@@ -7,6 +7,7 @@ export interface OneDriveConnection {
   drive_name: string | null;
   sync_enabled: boolean;
   last_sync_at: string | null;
+  access_token?: string;
 }
 
 export function useOneDriveConnection() {
