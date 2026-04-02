@@ -361,7 +361,7 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto h-[calc(100vh-4rem)]">
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto h-[calc(100vh-4rem)] custom-scrollbar">
         {filteredNavigation.map((item) => {
           if (item.children) {
             const isOpen = openSections.includes(item.title);

@@ -52,17 +52,23 @@ export default function CreateDealPage() {
   const [contactId, setContactId] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
-  const contactOptions = useMemo(() => (contacts || []).map((c: any) => ({
-    id: c.id,
-    label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "(no name)",
-    sublabel: c.email || c.phone,
-  })), [contacts]);
+  const contactOptions = useMemo(() => {
+    const data = (contacts as any)?.data || contacts || [];
+    return (Array.isArray(data) ? data : []).map((c: any) => ({
+      id: c.id,
+      label: `${c.first_name || ""} ${c.last_name || ""}`.trim() || "(no name)",
+      sublabel: c.email || c.phone,
+    }));
+  }, [contacts]);
 
-  const companyOptions = useMemo(() => (companies || []).map((c: any) => ({
-    id: c.id,
-    label: c.name,
-    sublabel: c.email || c.phone,
-  })), [companies]);
+  const companyOptions = useMemo(() => {
+    const data = (companies as any)?.data || companies || [];
+    return (Array.isArray(data) ? data : []).map((c: any) => ({
+      id: c.id,
+      label: c.name,
+      sublabel: c.email || c.phone,
+    }));
+  }, [companies]);
 
   const form = useForm<DealForm>({
     resolver: zodResolver(dealSchema),

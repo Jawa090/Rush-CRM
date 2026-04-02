@@ -21,6 +21,7 @@ import {
 import { useMarketingSequences, useCreateSequence, useDeleteSequence, useUpdateSequence } from "@/hooks/useMarketingData";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useCustomDialog } from "@/contexts/DialogContext";
 
 const triggerTypes = [
   { value: "manual", label: "Manual Enrollment" },
@@ -35,6 +36,7 @@ export default function SequencesPage() {
   const createSequence = useCreateSequence();
   const deleteSequence = useDeleteSequence();
   const updateSequence = useUpdateSequence();
+  const { confirm } = useCustomDialog();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", trigger_type: "manual" });
@@ -59,7 +61,7 @@ export default function SequencesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this sequence?')) {
+    if (await confirm('Are you sure you want to delete this sequence?', { variant: 'destructive', title: 'Delete Sequence' })) {
       await deleteSequence.mutateAsync(id);
     }
   };

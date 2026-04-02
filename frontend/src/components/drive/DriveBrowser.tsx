@@ -35,6 +35,7 @@ import {
 import { googleDriveService, DriveFile } from "@/services/googleDriveService";
 import { toast } from "sonner";
 import { ConnectedDrive } from "@/hooks/useDrives";
+import { useCustomDialog } from "@/contexts/DialogContext";
 import { getUnifiedFileIcon, formatFileSize, formatRelativeDate } from "./driveUtils";
 import { DriveFileListSkeleton } from "./DriveFileListSkeleton";
 
@@ -49,6 +50,7 @@ interface BreadcrumbItem {
 }
 
 export function DriveBrowser({ drive, onClose }: DriveBrowserProps) {
+  const { confirm } = useCustomDialog();
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentFolderId, setCurrentFolderId] = useState("root");
@@ -141,7 +143,7 @@ export function DriveBrowser({ drive, onClose }: DriveBrowserProps) {
   };
 
   const handleDelete = async (file: DriveFile) => {
-    if (!confirm(`Are you sure you want to delete "${file.name}"?`)) return;
+    if (!await confirm(`Are you sure you want to delete "${file.name}"?`, { variant: 'destructive', title: 'Delete Item' })) return;
     try {
       setFiles(prev => prev.filter(f => f.id !== file.id));
       await googleDriveService.delete(drive.id, file.id);

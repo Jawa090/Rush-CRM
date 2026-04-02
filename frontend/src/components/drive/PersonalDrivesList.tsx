@@ -14,6 +14,7 @@ import { useOneDriveConnection } from "@/hooks/useOneDriveConnection";
 import { googleDriveService } from "@/services/googleDriveService";
 import { oneDriveService } from "@/services/oneDriveService";
 import { toast } from "sonner";
+import { useCustomDialog } from "@/contexts/DialogContext";
 
 const driveTypeIcons: Record<string, { icon: typeof Cloud; color: string }> = {
   google_drive: { icon: Cloud, color: "text-red-500" },
@@ -42,6 +43,7 @@ interface PersonalDrivesListProps {
 export function PersonalDrivesList({ onBrowse }: PersonalDrivesListProps) {
   const { data: drives, isLoading } = useConnectedDrives("personal");
   const { data: oneDriveConn } = useOneDriveConnection();
+  const { confirm } = useCustomDialog();
   const deleteDrive = useDeleteDrive();
 
   if (isLoading) {
@@ -57,7 +59,7 @@ export function PersonalDrivesList({ onBrowse }: PersonalDrivesListProps) {
   }
 
   const handleDelete = async (driveId: string) => {
-    if (confirm("Are you sure you want to disconnect this personal drive?")) {
+    if (await confirm("Are you sure you want to disconnect this personal drive?", { variant: 'destructive', title: 'Disconnect Personal Drive' })) {
       await deleteDrive.mutateAsync(driveId);
     }
   };

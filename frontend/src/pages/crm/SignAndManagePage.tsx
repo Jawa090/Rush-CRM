@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/crm/ui/EmptyState";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDocuments, useUpdateDocument, useDeleteDocument } from "@/hooks/useDocuments";
 import { CreateDocumentDialog } from "@/components/documents/CreateDocumentDialog";
+import { useCustomDialog } from "@/contexts/DialogContext";
 import { format } from "date-fns";
 import { 
   Plus, 
@@ -55,6 +56,7 @@ export default function SignAndManagePage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const { confirm } = useCustomDialog();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -113,8 +115,8 @@ export default function SignAndManagePage() {
     updateDocument.mutate({ id: docId, status: newStatus });
   };
 
-  const handleDelete = (docId: string) => {
-    if (confirm('Are you sure you want to delete this document?')) {
+  const handleDelete = async (docId: string) => {
+    if (await confirm('Are you sure you want to delete this document?', { variant: 'destructive', title: 'Delete Document' })) {
       deleteDocument.mutate(docId);
     }
   };

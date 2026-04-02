@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { leadsApi, dealsApi, contactsApi, companiesApi, customersApi, vendorsApi, signingPartiesApi, productsApi, stockApi, warehousesApi, purchaseOrdersApi } from '@/lib/api';
+import { leadsApi, dealsApi, contactsApi, companiesApi, customersApi, vendorsApi, signingPartiesApi, productsApi, stockApi, warehousesApi, purchaseOrdersApi, usersApi, authApi } from '@/lib/api';
 import { toast } from 'sonner';
 
 // Cache configuration for better performance
@@ -54,11 +54,7 @@ export function useCreateLead() {
       queryClient.invalidateQueries({ queryKey: ['lead-stats'] });
       toast.success('Lead created successfully');
     },
-    onError: (error: Error) => {
-      // Revert optimistic update on error
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast.error('Failed to create lead: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -81,9 +77,7 @@ export function useUpdateLead() {
       
       toast.success('Lead updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update lead: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -96,9 +90,7 @@ export function useDeleteLead() {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Lead deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to delete lead: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -120,9 +112,7 @@ export function useUpdateLeadStage() {
       
       toast.success('Lead stage updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update lead stage: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -168,9 +158,7 @@ export function useCreateDeal() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Deal created successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to create deal: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -193,9 +181,7 @@ export function useUpdateDeal() {
       
       toast.success('Deal updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update deal: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -208,9 +194,7 @@ export function useDeleteDeal() {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('Deal deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to delete deal: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -232,9 +216,7 @@ export function useUpdateDealStage() {
       
       toast.success('Deal stage updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update deal stage: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -255,9 +237,7 @@ export function useUpdateDealStatus() {
       
       toast.success('Deal status updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update deal status: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -303,9 +283,7 @@ export function useCreateContact() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contact created successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to create contact: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -319,9 +297,7 @@ export function useUpdateContact() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contact updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update contact: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -334,9 +310,7 @@ export function useDeleteContact() {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contact deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to delete contact: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -372,9 +346,7 @@ export function useCreateCompany() {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Company created successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to create company: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -388,9 +360,7 @@ export function useUpdateCompany() {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Company updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update company: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -403,9 +373,7 @@ export function useDeleteCompany() {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Company deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to delete company: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -462,9 +430,7 @@ export function useUpdateCustomer() {
       
       toast.success('Customer updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update customer: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -514,9 +480,7 @@ export function useCreateVendor() {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
       toast.success('Vendor created successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to create vendor: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -530,9 +494,7 @@ export function useUpdateVendor() {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
       toast.success('Vendor updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update vendor: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -545,9 +507,7 @@ export function useDeleteVendor() {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
       toast.success('Vendor deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to delete vendor: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -559,6 +519,8 @@ export function useSigningParties(params?: { search?: string; companyId?: string
       const response = await signingPartiesApi.getAll(params);
       return response.data;
     },
+    staleTime: 30000,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -579,9 +541,7 @@ export function useCreateSigningParty() {
       queryClient.invalidateQueries({ queryKey: ['signing-parties'] });
       toast.success('Signing party created successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to create signing party: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -595,9 +555,7 @@ export function useUpdateSigningParty() {
       queryClient.invalidateQueries({ queryKey: ['signing-parties'] });
       toast.success('Signing party updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update signing party: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -610,9 +568,7 @@ export function useDeleteSigningParty() {
       queryClient.invalidateQueries({ queryKey: ['signing-parties'] });
       toast.success('Signing party deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to delete signing party: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -659,9 +615,7 @@ export function useCreateProduct() {
       
       toast.success('Product created successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to create product: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -685,9 +639,7 @@ export function useUpdateProduct() {
       
       toast.success('Product updated successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to update product: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -711,9 +663,7 @@ export function useDeleteProduct() {
       
       toast.success('Product deleted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to delete product: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -761,9 +711,7 @@ export function useAdjustStock() {
       queryClient.invalidateQueries({ queryKey: ['stock', 'alerts'] });
       toast.success('Stock adjusted successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to adjust stock: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -778,9 +726,7 @@ export function useTransferStock() {
       queryClient.invalidateQueries({ queryKey: ['warehouses'] });
       toast.success('Stock transferred successfully');
     },
-    onError: (error: Error) => {
-      toast.error('Failed to transfer stock: ' + error.message);
-    },
+    onError: (error: Error) => toast.error(error.message),
   });
 }
 
@@ -944,5 +890,22 @@ export function useDeletePurchaseOrder() {
     onError: (error: Error) => {
       toast.error('Failed to delete purchase order: ' + error.message);
     },
+  });
+}
+
+// Users hooks
+export function useUsers(params?: { search?: string }) {
+  return useQuery({
+    queryKey: ['users', params],
+    queryFn: () => usersApi.getAll(params),
+    staleTime: STALE_TIME,
+  });
+}
+
+export function useProfile() {
+  return useQuery({
+    queryKey: ['profile'],
+    queryFn: () => authApi.getProfile(),
+    staleTime: STALE_TIME,
   });
 }

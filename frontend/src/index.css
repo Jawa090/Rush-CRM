@@ -38,7 +38,7 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --info: 199 89% 48%;
+    --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
@@ -66,7 +66,7 @@
     --chart-5: 340 75% 55%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(240 70% 55%));
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 50%));
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(160 84% 39%));
     --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%), hsl(25 95% 53%));
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 98%));
@@ -115,7 +115,7 @@
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 212 27% 84%;
+    --ring: 217 91% 60%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 95%;
@@ -186,6 +186,23 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--sidebar-accent));
+    border-radius: 20px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--sidebar-primary) / 0.4);
   }
 }
 

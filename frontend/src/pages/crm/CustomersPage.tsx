@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Plus, Mail, Phone, Building2, Loader2, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Mail, Phone, Building2, Loader2, Sparkles, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +24,7 @@ const statusBadge = (status?: string) => {
 };
 
 export default function CustomersPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
@@ -155,75 +157,81 @@ export default function CustomersPage() {
           { label: "Filtered", value: filtered.length, tone: "success" },
         ]}
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="gradient-primary">
-                <Plus className="mr-2 h-4 w-4" />
-                New Customer
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Create customer</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Acme Corp"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="contact@acme.com"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="(555) 123-4567"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/crm/leads/import")}>
+              <Upload className="mr-2 h-4 w-4" />
+              Import
+            </Button>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button className="gradient-primary">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Customer
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Create customer</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-2">
                   <div className="grid gap-2">
-                    <Label>Status</Label>
+                    <Label htmlFor="name">Name</Label>
                     <Input
-                      value={form.status}
-                      onChange={(e) => setForm({ ...form, status: e.target.value })}
-                      placeholder="Active / VIP"
+                      id="name"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="Acme Corp"
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Industry</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      value={form.industry}
-                      onChange={(e) => setForm({ ...form, industry: e.target.value })}
-                      placeholder="Construction"
+                      id="email"
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      placeholder="contact@acme.com"
                     />
                   </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={form.phone}
+                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-2">
+                      <Label>Status</Label>
+                      <Input
+                        value={form.status}
+                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        placeholder="Active / VIP"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Industry</Label>
+                      <Input
+                        value={form.industry}
+                        onChange={(e) => setForm({ ...form, industry: e.target.value })}
+                        placeholder="Construction"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreate} disabled={createCustomer.isPending}>
-                  {createCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleCreate} disabled={createCustomer.isPending}>
+                    {createCustomer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
