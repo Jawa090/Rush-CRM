@@ -101,8 +101,6 @@ router.use('/api/hrms', hrmsRoutes);
 router.use('/api/hrms/notifications', hrmsNotificationsRoutes);
 router.use('/api/telephony', telephonyRoutes);
 
-// Removed inline routes: Telephony, Projects Report, and Instantly Integration
-// These have been successfully relocated to their respective modular routing and controller files.
 
 router.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
