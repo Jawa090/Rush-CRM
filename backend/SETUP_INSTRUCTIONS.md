@@ -16,16 +16,19 @@ Follow these simple steps to set up the complete CRM database with all tables an
    npm install
    ```
 
-2. **Run All Migrations**
+2. **Run Complete Setup**
    ```bash
-   node src/database/run-migrations.js
+   node complete-setup-for-team.js
    ```
 
    This will automatically:
+   - Create migrations tracking table
+   - Run all 47 migration files in order
    - Create all 98 tables
    - Add all 1,370+ columns
    - Set up all relationships
    - Configure all indexes
+   - Verify the setup
 
 3. **Start the Server**
    ```bash
