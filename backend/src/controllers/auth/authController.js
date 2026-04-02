@@ -79,7 +79,7 @@ const register = async (req, res, next) => {
       token,
     });
   } catch (err) {
-    await client.query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(() => { });
     next(err);
   } finally {
     client.release();
@@ -203,7 +203,7 @@ const updateProfile = async (req, res, next) => {
 const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
@@ -217,7 +217,7 @@ const forgotPassword = async (req, res, next) => {
 const resetPassword = async (req, res, next) => {
   try {
     const { token, password } = req.body;
-    
+
     if (!token || !password) {
       return res.status(400).json({ error: 'Token and password are required' });
     }
