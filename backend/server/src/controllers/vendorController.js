@@ -7,8 +7,11 @@ const createVendorSchema = Joi.object({
   phone: Joi.string().optional().allow(''),
   address: Joi.string().optional().allow(''),
   contactPerson: Joi.string().optional().allow(''),
+  businessType: Joi.string().optional().allow(''),
+  website: Joi.string().optional().allow(''),
   notes: Joi.string().optional().allow(''),
   status: Joi.string().optional().default('active'),
+  rating: Joi.number().optional(),
 });
 
 const updateVendorSchema = Joi.object({
@@ -17,8 +20,11 @@ const updateVendorSchema = Joi.object({
   phone: Joi.string().optional().allow('', null),
   address: Joi.string().optional().allow('', null),
   contactPerson: Joi.string().optional().allow('', null),
+  businessType: Joi.string().optional().allow('', null),
+  website: Joi.string().optional().allow('', null),
   notes: Joi.string().optional().allow('', null),
   status: Joi.string().optional(),
+  rating: Joi.number().optional().allow(null),
 }).min(1);
 
 const getAll = async (req, res, next) => {
@@ -84,13 +90,13 @@ const create = async (req, res, next) => {
       return res.status(400).json({ error: error.details[0].message });
     }
 
-    const { name, email, phone, address, contactPerson, notes, status } = value;
+    const { name, email, phone, address, contactPerson, businessType, website, notes, status, rating } = value;
 
     const result = await db.query(
-      `INSERT INTO public.vendors (org_id, created_by, name, email, phone, address, contact_person, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO public.vendors (org_id, created_by, name, email, phone, address, contact_person, business_type, website, notes, status, rating)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
-      [req.user.orgId, req.user.id, name, email, phone, address, contactPerson, status || 'active']
+      [req.user.orgId, req.user.id, name, email, phone, address, contactPerson, businessType, website, notes, status || 'active', rating || 4.0]
     );
 
     res.status(201).json(result.rows[0]);

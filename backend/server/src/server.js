@@ -51,6 +51,7 @@ const uniboxRoutes = require('./routes/unibox');
 const signingPartyRoutes = require('./routes/signingParties');
 const hrmsRoutes = require('./routes/hrms');
 const hrmsNotificationsRoutes = require('./routes/hrmsNotifications');
+const inventoryRoutes = require('./routes/inventory');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -88,6 +89,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
+app.use('/api/payroll', require('./routes/payroll'));
 app.use('/api/products', productRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/vendors', vendorRoutes);
@@ -121,6 +123,7 @@ app.use('/api/unibox', uniboxRoutes);
 app.use('/api/signing-parties', signingPartyRoutes);
 app.use('/api/hrms', hrmsRoutes);
 app.use('/api/hrms/notifications', hrmsNotificationsRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 // Telephony providers
 app.get('/api/telephony/providers', require('./middleware/auth').auth, require('./middleware/auth').requireOrg, async (req, res, next) => {

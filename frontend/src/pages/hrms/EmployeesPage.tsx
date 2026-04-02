@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ function getDeptColor(dept: string) {
 const EMPTY_FORM = { first_name: "", last_name: "", email: "", phone: "", department: "", position: "", salary: "", address: "" };
 
 export default function EmployeesPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deptFilter, setDeptFilter] = useState("all");
@@ -107,7 +109,7 @@ export default function EmployeesPage() {
           <h1 className="text-xl font-semibold">Employees</h1>
           <p className="text-sm text-muted-foreground">Manage your organization's staff</p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => { setEditing(null); setForm(EMPTY_FORM); setDialog(true); }}>
+        <Button size="sm" className="gap-1.5" onClick={() => navigate('/hrms/employees/create')}>
           <Plus className="h-3.5 w-3.5" /> Add Employee
         </Button>
       </div>
@@ -182,7 +184,7 @@ export default function EmployeesPage() {
           ) : employees.map((emp) => {
             const name = emp.name || `${emp.first_name} ${emp.last_name}`.trim();
             return (
-              <div key={emp.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors group">
+              <div key={emp.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/30 transition-colors group cursor-pointer" onClick={() => navigate(`/hrms/employees/${emp.id}`)}>
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <Avatar className="h-8 w-8 shrink-0">
                     <AvatarFallback className={cn("text-[11px] text-white", emp.department ? getDeptColor(emp.department) : "bg-primary")}>
@@ -215,10 +217,10 @@ export default function EmployeesPage() {
                   </Badge>
                 </div>
                 <div className="w-16 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(emp)} className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                  <button onClick={(e) => { e.stopPropagation(); navigate(`/hrms/employees/${emp.id}/edit`); }} className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                     <Edit className="h-3.5 w-3.5" />
                   </button>
-                  <button onClick={() => { setDeleting(emp); setDeleteDialog(true); }} className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-muted transition-colors">
+                  <button onClick={(e) => { e.stopPropagation(); setDeleting(emp); setDeleteDialog(true); }} className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-muted transition-colors">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>

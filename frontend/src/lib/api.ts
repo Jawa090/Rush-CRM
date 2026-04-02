@@ -231,6 +231,15 @@ export const leaveApi = {
   delete: (id: string) => api.delete(`/leave/${id}`),
 };
 
+export const payrollApi = {
+  getSalarySlips: (params?: { month?: number; year?: number; employee_id?: string }) => 
+    api.get<{ data: any[] }>('/payroll/slips', params),
+  getSalarySlipById: (id: string) => api.get<{ data: any }>(`/payroll/slips/${id}`),
+  generateSalarySlip: (data: { employee_id: string; month: number; year: number; basic_salary: number; earnings: any[]; deductions: any[] }) => 
+    api.post<{ data: any }>('/payroll/slips', data),
+  deleteSalarySlip: (id: string) => api.delete(`/payroll/slips/${id}`),
+};
+
 export const productsApi = {
   getAll: (params?: { search?: string; category?: string }) => 
     api.get<{ data: any[]; pagination: any }>('/products', params),

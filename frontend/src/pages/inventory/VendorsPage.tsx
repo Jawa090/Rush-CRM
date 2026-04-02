@@ -26,6 +26,8 @@ type Vendor = {
   rating?: number;
   orders?: number;
   website?: string;
+  business_type?: string;
+  address?: string;
 };
 
 const statusOptions = [
@@ -156,8 +158,11 @@ export default function VendorsPage() {
         contactPerson: form.contact_person,
         email: form.email,
         phone: form.phone,
+        address: form.address,
+        businessType: form.business_type,
+        website: form.website,
         status: form.status,
-        // Add other fields as needed
+        rating: form.rating,
       };
 
       const isEditing = localVendors.find(v => v.id === form.id);
@@ -199,29 +204,47 @@ export default function VendorsPage() {
                 <Plus className="mr-2 h-4 w-4" /> Add Vendor
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Add vendor</DialogTitle>
+                <DialogTitle>Add Vendor</DialogTitle>
               </DialogHeader>
-              <div className="grid gap-3 py-2">
+              <div className="grid gap-4 py-2">
                 <div className="grid gap-2">
-                  <Label>Name</Label>
-                  <Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  <Label>Vendor Name *</Label>
+                  <Input value={form.name || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Enter vendor name" />
                 </div>
+                
                 <div className="grid gap-2">
-                  <Label>Contact person</Label>
-                  <Input value={form.contact_person || ""} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} />
+                  <Label>Business Type (Kia Kam Karta Ha)</Label>
+                  <Input value={form.business_type || ""} onChange={(e) => setForm({ ...form, business_type: e.target.value })} placeholder="e.g., Electronics Supplier, Raw Materials, etc." />
                 </div>
+
+                <div className="grid gap-2">
+                  <Label>Contact Person</Label>
+                  <Input value={form.contact_person || ""} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} placeholder="Contact person name" />
+                </div>
+                
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label>Email</Label>
-                    <Input value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                    <Input type="email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="vendor@example.com" />
                   </div>
                   <div className="grid gap-2">
                     <Label>Phone</Label>
-                    <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                    <Input value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+92 300 1234567" />
                   </div>
                 </div>
+
+                <div className="grid gap-2">
+                  <Label>Address</Label>
+                  <Input value={form.address || ""} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder="Complete address with city" />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Website</Label>
+                  <Input value={form.website || ""} onChange={(e) => setForm({ ...form, website: e.target.value })} placeholder="https://vendor-website.com" />
+                </div>
+                
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label>Status</Label>
@@ -235,7 +258,7 @@ export default function VendorsPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Rating</Label>
+                    <Label>Rating (1-5)</Label>
                     <Input
                       type="number"
                       min={1}
@@ -243,17 +266,14 @@ export default function VendorsPage() {
                       step={0.1}
                       value={form.rating ?? 4}
                       onChange={(e) => setForm({ ...form, rating: Number(e.target.value) })}
+                      placeholder="4.0"
                     />
                   </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Website</Label>
-                  <Input value={form.website || ""} onChange={(e) => setForm({ ...form, website: e.target.value })} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setVendorModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleSave}>Save</Button>
+                <Button onClick={handleSave}>Save Vendor</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -311,6 +331,9 @@ export default function VendorsPage() {
                           {vendor.status || "Active"}
                         </Badge>
                       </div>
+                      {vendor.business_type && (
+                        <p className="text-sm font-medium text-muted-foreground mt-0.5">{vendor.business_type}</p>
+                      )}
                       <p className="text-sm text-muted-foreground">{vendor.contact_person || (vendor as any).contactPerson || ""}</p>
                       <div className="flex items-center flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
@@ -328,6 +351,9 @@ export default function VendorsPage() {
                           </span>
                         )}
                       </div>
+                      {vendor.address && (
+                        <p className="text-xs text-muted-foreground mt-1">📍 {vendor.address}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-6">

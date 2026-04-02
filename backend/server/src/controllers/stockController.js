@@ -191,10 +191,36 @@ const getHistory = async (req, res, next) => {
   }
 };
 
+const getMovements = async (req, res, next) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const result = await db.query(
+      `SELECT 
+        sm.*,
+        p.name as product_name,
+        p.sku,
+        u.full_name as created_by_name
+       FROM stock_movements sm
+       JOIN products p ON sm.product_id = p.id
+       LEFT JOIN users u ON sm.created_by = u.id
+       WHERE sm.org_id = $1
+       ORDER BY sm.created_at DESC
+       LIMIT $2`,
+      [req.user.orgId, limit]
+    );
+
+    res.json({ data: result.rows });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAll,
   getAlerts,
   adjust,
   transfer,
   getHistory,
+  getMovements,
 };
