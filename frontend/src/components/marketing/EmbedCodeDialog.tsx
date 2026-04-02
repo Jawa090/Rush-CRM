@@ -26,7 +26,7 @@ export default function EmbedCodeDialog({ open, onOpenChange, formId, formName }
   };
 
   const htmlSnippet = `<!-- ${formName} - Lead Capture Form -->
-<form id="lv-form-${formId.slice(0, 8)}" onsubmit="return handleLovableForm(event)">
+<form id="rc-form-${formId.slice(0, 8)}" onsubmit="return handleSubmission(event)">
   <input type="email" name="email" placeholder="Email *" required />
   <input type="text" name="first_name" placeholder="First Name *" required />
   <input type="text" name="last_name" placeholder="Last Name" />
@@ -36,7 +36,7 @@ export default function EmbedCodeDialog({ open, onOpenChange, formId, formName }
 </form>
 
 <script>
-async function handleLovableForm(e) {
+async function handleSubmission(e) {
   e.preventDefault();
   const form = e.target;
   const btn = form.querySelector('button[type="submit"]');

@@ -1,0 +1,117 @@
+const express = require('express');
+
+const authRoutes = require('./routes/auth/auth');
+const leadRoutes = require('./routes/crm/leads');
+const leadImportRoutes = require('./routes/crm/leadImport');
+const leadExternalSourceRoutes = require('./routes/crm/leadExternalSource');
+const leadWorkspaceRoutes = require('./routes/crm/leadWorkspace');
+const dealRoutes = require('./routes/crm/deals');
+const contactRoutes = require('./routes/crm/contacts');
+const companyRoutes = require('./routes/crm/companies');
+const customerRoutes = require('./routes/crm/customers');
+const activityRoutes = require('./routes/crm/activities');
+const employeeRoutes = require('./routes/hrms/employees');
+const attendanceRoutes = require('./routes/hrms/attendance');
+const leaveRoutes = require('./routes/hrms/leave');
+const productRoutes = require('./routes/inventory/products');
+const stockRoutes = require('./routes/inventory/stock');
+const vendorRoutes = require('./routes/inventory/vendors');
+const documentsRoutes = require('./routes/projects/documents');
+const warehouseRoutes = require('./routes/inventory/warehouses');
+const purchaseOrderRoutes = require('./routes/inventory/purchaseOrders');
+const projectRoutes = require('./routes/projects/projects');
+const taskRoutes = require('./routes/projects/tasks');
+const workgroupRoutes = require('./routes/collaboration/workgroups');
+const workgroupFilesRoutes = require('./routes/collaboration/workgroupFiles');
+const workgroupWikiRoutes = require('./routes/collaboration/workgroupWiki');
+const workgroupNotificationsRoutes = require('./routes/collaboration/workgroupNotifications');
+const userRoutes = require('./routes/auth/users');
+const roleRoutes = require('./routes/auth/roles');
+const permissionRoutes = require('./routes/auth/permissions');
+const orgRoutes = require('./routes/auth/organizations');
+const calendarRoutes = require('./routes/collaboration/calendar');
+const workflowRoutes = require('./routes/automation/workflows');
+const marketingRoutes = require('./routes/crm/marketing');
+const driveRoutes = require('./routes/collaboration/drive');
+const drivesRoutes = require('./routes/collaboration/drives');
+const driveIntegrationRoutes = require('./routes/collaboration/driveIntegrations');
+const emailSyncRoutes = require('./routes/collaboration/emailSync');
+const integrationRoutes = require('./routes/automation/integrations');
+const milestonesRoutes = require('./routes/projects/milestones');
+const timeEntriesRoutes = require('./routes/projects/timeEntries');
+const risksRoutes = require('./routes/projects/risks');
+const invoicesRoutes = require('./routes/inventory/invoices');
+const notificationsRoutes = require('./routes/automation/notifications');
+const templatesRoutes = require('./routes/automation/templates');
+const uniboxRoutes = require('./routes/collaboration/unibox');
+const signingPartyRoutes = require('./routes/crm/signingParties');
+const hrmsRoutes = require('./routes/hrms/hrms');
+const hrmsNotificationsRoutes = require('./routes/hrms/hrmsNotifications');
+const telephonyRoutes = require('./routes/crm/telephony');
+const errorHandler = require('./middleware/errorHandler');
+
+const router = express.Router();
+
+router.use('/api/auth', authRoutes);
+router.use('/api/lead-import', leadImportRoutes);
+router.use('/api/lead-external-sources', leadExternalSourceRoutes);
+router.use('/api/lead-workspace', leadWorkspaceRoutes);
+router.use('/api/leads', leadRoutes);
+router.use('/api/deals', dealRoutes);
+router.use('/api/contacts', contactRoutes);
+router.use('/api/companies', companyRoutes);
+router.use('/api/customers', customerRoutes);
+router.use('/api/activities', activityRoutes);
+router.use('/api/employees', employeeRoutes);
+router.use('/api/attendance', attendanceRoutes);
+router.use('/api/leave', leaveRoutes);
+router.use('/api/products', productRoutes);
+router.use('/api/stock', stockRoutes);
+router.use('/api/vendors', vendorRoutes);
+router.use('/api/documents', documentsRoutes);
+router.use('/api/warehouses', warehouseRoutes);
+router.use('/api/purchase-orders', purchaseOrderRoutes);
+router.use('/api/projects', projectRoutes);
+router.use('/api/tasks', taskRoutes);
+router.use('/api/workgroups', workgroupRoutes);
+router.use('/api/workgroups', workgroupFilesRoutes);
+router.use('/api/workgroups', workgroupWikiRoutes);
+router.use('/api/workgroups', workgroupNotificationsRoutes);
+router.use('/api/users', userRoutes);
+router.use('/api/roles', roleRoutes);
+router.use('/api/permissions', permissionRoutes);
+router.use('/api/organizations', orgRoutes);
+router.use('/api/calendar', calendarRoutes);
+router.use('/api/workflows', workflowRoutes);
+router.use('/api/marketing', marketingRoutes);
+router.use('/api/drive', driveRoutes);
+router.use('/api/drives', drivesRoutes);
+router.use('/api/drives/integrations', driveIntegrationRoutes);
+router.use('/api/email', emailSyncRoutes);
+router.use('/api/integrations', integrationRoutes);
+router.use('/api/milestones', milestonesRoutes);
+router.use('/api/time-entries', timeEntriesRoutes);
+router.use('/api/risks', risksRoutes);
+router.use('/api/invoices', invoicesRoutes);
+router.use('/api/notifications', notificationsRoutes);
+router.use('/api/templates', templatesRoutes);
+router.use('/api/unibox', uniboxRoutes);
+router.use('/api/signing-parties', signingPartyRoutes);
+router.use('/api/hrms', hrmsRoutes);
+router.use('/api/hrms/notifications', hrmsNotificationsRoutes);
+router.use('/api/telephony', telephonyRoutes);
+
+// Removed inline routes: Telephony, Projects Report, and Instantly Integration
+// These have been successfully relocated to their respective modular routing and controller files.
+
+router.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+router.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+router.use(errorHandler);
+
+module.exports = router;
