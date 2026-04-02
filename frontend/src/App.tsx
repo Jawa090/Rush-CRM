@@ -163,17 +163,22 @@ const App = () => (
                   <Route path="/hrms/dashboard" element={<HRMSDashboard />} />
                   <Route path="/hrms/attendance" element={<AttendancePage />} />
                   <Route path="/hrms/employees" element={<EmployeesPage />} />
+                  <Route path="/hrms/employees/create" element={<CreateEmployeePage />} />
+                  <Route path="/hrms/employees/edit/:id" element={<EditEmployeePage />} />
+                  <Route path="/hrms/employees/:id" element={<EmployeeDetailPage />} />
                   <Route path="/hrms/leave" element={<LeaveManagementPage />} />
                   <Route path="/hrms/payroll" element={<PayrollPage />} />
                   <Route path="/hrms/payroll/generate" element={<GenerateSalarySlipPage />} />
                   <Route path="/hrms/payroll/view/:id" element={<ViewSalarySlipPage />} />
                   <Route path="/hrms/notifications" element={<NotificationsPage />} />
                   {/* Inventory Routes */}
+                  <Route path="/inventory" element={<InventoryDashboard />} />
                   <Route path="/inventory/products" element={<ProductsPage />} />
                   <Route path="/inventory/stock" element={<StockPage />} />
                   <Route path="/inventory/purchase-orders" element={<PurchaseOrdersPage />} />
                   <Route path="/inventory/vendors" element={<VendorsPage />} />
                   <Route path="/inventory/warehouse" element={<WarehousePage />} />
+                  <Route path="/inventory/assignments" element={<EmployeeAssignmentsPage />} />
                   {/* Admin Routes - restricted to admin users */}
                   <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
                   <Route path="/admin/roles" element={<AdminRoute><RolesPage /></AdminRoute>} />

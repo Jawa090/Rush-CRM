@@ -262,7 +262,40 @@ const create = async (req, res, next) => {
       values
     );
 
-    res.status(201).json(result.rows[0]);
+    const newEmployee = result.rows[0];
+
+    // Initialize leave balances for the new employee
+    try {
+      const currentYear = new Date().getFullYear();
+      
+      // Get all active leave types for this organization
+      const leaveTypes = await db.query(
+        'SELECT id, days_allowed FROM leave_types WHERE org_id = $1 AND is_active = true',
+        [req.user.orgId]
+      );
+
+      // Create balance entries for each leave type
+      if (leaveTypes.rows.length > 0) {
+        const balanceInserts = leaveTypes.rows.map(lt => 
+          db.query(
+            `INSERT INTO employee_leave_balances (
+              employee_id, leave_type_id, org_id, year, 
+              total_allocated, used, pending, available
+            ) VALUES ($1, $2, $3, $4, $5, 0, 0, $5)
+            ON CONFLICT (employee_id, leave_type_id, year) DO NOTHING`,
+            [newEmployee.id, lt.id, req.user.orgId, currentYear, lt.days_allowed]
+          )
+        );
+        
+        await Promise.all(balanceInserts);
+        console.log(`✅ Initialized ${leaveTypes.rows.length} leave balances for employee ${newEmployee.id}`);
+      }
+    } catch (balanceError) {
+      console.error('⚠️ Failed to initialize leave balances:', balanceError);
+      // Don't fail employee creation if balance initialization fails
+    }
+
+    res.status(201).json(newEmployee);
   } catch (err) {
     next(err);
   }
