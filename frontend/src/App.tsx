@@ -89,10 +89,12 @@ import ProjectReportPage from "./pages/projects/ProjectReportPage";
 // Marketing
 import MarketingDashboardPage from "./pages/marketing/MarketingDashboardPage";
 import CampaignsPage from "./pages/marketing/CampaignsPage";
-import ListsPage from "./pages/marketing/ListsPage";
-import FormsPage from "./pages/marketing/FormsPage";
-import SequencesPage from "./pages/marketing/SequencesPage";
-import MarketingAnalyticsPage from "./pages/marketing/MarketingAnalyticsPage";
+import CreateCampaignPage from "./pages/marketing/CreateCampaignPage";
+import VisualCampaignBuilder from "./pages/marketing/VisualCampaignBuilder";
+import EnhancedListsPage from "./pages/marketing/EnhancedListsPage";
+import EnhancedFormsPage from "./pages/marketing/EnhancedFormsPage";
+import EnhancedSequencesPage from "./pages/marketing/EnhancedSequencesPage";
+import EnhancedAnalyticsPage from "./pages/marketing/EnhancedAnalyticsPage";
 // Other
 import PlaceholderPage from "./pages/PlaceholderPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -178,6 +180,7 @@ const App = () => (
                   <Route path="/inventory/purchase-orders" element={<PurchaseOrdersPage />} />
                   <Route path="/inventory/vendors" element={<VendorsPage />} />
                   <Route path="/inventory/warehouse" element={<WarehousePage />} />
+                  <Route path="/inventory/warehouses" element={<WarehousePage />} />
                   <Route path="/inventory/assignments" element={<EmployeeAssignmentsPage />} />
                   {/* Admin Routes - restricted to admin users */}
                   <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
@@ -194,10 +197,12 @@ const App = () => (
                   {/* Marketing */}
                   <Route path="/marketing" element={<MarketingDashboardPage />} />
                   <Route path="/marketing/campaigns" element={<CampaignsPage />} />
-                  <Route path="/marketing/lists" element={<ListsPage />} />
-                  <Route path="/marketing/forms" element={<FormsPage />} />
-                  <Route path="/marketing/sequences" element={<SequencesPage />} />
-                  <Route path="/marketing/analytics" element={<MarketingAnalyticsPage />} />
+                  <Route path="/marketing/campaigns/create" element={<CreateCampaignPage />} />
+                  <Route path="/marketing/campaigns/builder" element={<VisualCampaignBuilder />} />
+                  <Route path="/marketing/lists" element={<EnhancedListsPage />} />
+                  <Route path="/marketing/forms" element={<EnhancedFormsPage />} />
+                  <Route path="/marketing/sequences" element={<EnhancedSequencesPage />} />
+                  <Route path="/marketing/analytics" element={<EnhancedAnalyticsPage />} />
                   {/* Other Routes */}
                   <Route path="/settings" element={<SettingsPage />} />
                 </Route>

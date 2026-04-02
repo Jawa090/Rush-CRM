@@ -40,7 +40,7 @@ const getFolders = async (req, res, next) => {
              (SELECT COALESCE(SUM(file_size), 0) FROM drive_files WHERE folder_id = f.id AND is_deleted = false) as total_size
       FROM drive_folders f
       LEFT JOIN users u ON f.created_by = u.id
-      WHERE f.org_id = $1
+      WHERE f.org_id = $1 AND (f.is_deleted = false OR f.is_deleted IS NULL)
     `;
     
     const params = [req.user.orgId];

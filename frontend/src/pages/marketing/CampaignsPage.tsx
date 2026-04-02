@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Mail, MessageSquare, Share2, Search, MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Mail, MessageSquare, Share2, Search, MoreHorizontal, Trash2, Edit, Send, TestTube } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +20,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useMarketingCampaigns, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, useMarketingLists } from "@/hooks/useMarketingData";
+import { marketingApi } from "@/lib/api";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 const channelIcons: Record<string, React.ReactNode> = {
   email: <Mail className="h-4 w-4" />,
@@ -37,6 +40,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function CampaignsPage() {
+  const navigate = useNavigate();
   const { data: campaigns = [], isLoading } = useMarketingCampaigns();
   const { data: lists = [] } = useMarketingLists();
   const createCampaign = useCreateCampaign();
@@ -45,13 +49,17 @@ export default function CampaignsPage() {
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showTestEmail, setShowTestEmail] = useState(false);
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [sending, setSending] = useState(false);
 
   const [form, setForm] = useState({
     name: "", description: "", campaign_type: "email", channel: "email",
     subject_line: "", from_name: "", from_email: "", list_id: "",
   });
 
-  const filtered = campaigns.filter((c) => {
+  const filtered = campaigns.filter((c: any) => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || c.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -75,13 +83,65 @@ export default function CampaignsPage() {
     });
   };
 
+  const handleSendCampaign = async (campaign: any) => {
+    if (!campaign.list_id) {
+      toast.error("Campaign must have a target list to send");
+      return;
+    }
+
+    if (!campaign.subject || !campaign.content) {
+      toast.error("Campaign must have subject and content");
+      return;
+    }
+
+    if (!confirm(`Send campaign "${campaign.name}" to all contacts in the list?`)) {
+      return;
+    }
+
+    setSending(true);
+    try {
+      const result = await marketingApi.sendCampaign(campaign.id);
+      toast.success(result.message || "Campaign sent successfully");
+      // Refresh campaigns
+      window.location.reload();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send campaign");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail) {
+      toast.error("Please enter a test email address");
+      return;
+    }
+
+    setSending(true);
+    try {
+      await marketingApi.sendTestEmail(selectedCampaign.id, testEmail);
+      toast.success(`Test email sent to ${testEmail}`);
+      setShowTestEmail(false);
+      setTestEmail("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send test email");
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold tracking-tight">Campaigns</h1>
-        <Button onClick={() => setShowCreate(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> New Campaign
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => navigate("/marketing/campaigns/builder")} variant="outline" className="gap-2">
+            <Mail className="h-4 w-4" /> Visual Builder
+          </Button>
+          <Button onClick={() => navigate("/marketing/campaigns/create")} className="gap-2">
+            <Plus className="h-4 w-4" /> New Campaign
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -158,6 +218,20 @@ export default function CampaignsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => handleSendCampaign(c)}
+                          disabled={sending || c.status === 'sent'}
+                        >
+                          <Send className="h-4 w-4 mr-2" /> Send Campaign
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            setSelectedCampaign(c);
+                            setShowTestEmail(true);
+                          }}
+                        >
+                          <TestTube className="h-4 w-4 mr-2" /> Send Test Email
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => updateCampaign.mutate({ id: c.id, status: c.status === "active" ? "paused" : "active" })}>
                           {c.status === "active" ? "Pause" : "Activate"}
                         </DropdownMenuItem>
@@ -249,6 +323,45 @@ export default function CampaignsPage() {
             <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
             <Button onClick={handleCreate} disabled={!form.name.trim() || createCampaign.isPending}>
               {createCampaign.isPending ? "Creating..." : "Create Campaign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Email Dialog */}
+      <Dialog open={showTestEmail} onOpenChange={setShowTestEmail}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Test Email</DialogTitle>
+            <DialogDescription>
+              Send a test email to verify your campaign before sending to your entire list
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Test Email Address</Label>
+              <Input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="test@example.com"
+              />
+            </div>
+            {selectedCampaign && (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm font-medium mb-1">Campaign: {selectedCampaign.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  Subject: {selectedCampaign.subject || 'No subject'}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTestEmail(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendTestEmail} disabled={sending || !testEmail}>
+              {sending ? "Sending..." : "Send Test"}
             </Button>
           </DialogFooter>
         </DialogContent>

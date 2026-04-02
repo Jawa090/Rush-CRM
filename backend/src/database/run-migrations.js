@@ -16,7 +16,7 @@ async function runMigrations() {
     `);
 
     // Get list of migration files
-    const migrationsDir = path.join(__dirname, 'migrations');
+    const migrationsDir = path.join(__dirname, '..', 'migrations');
     const migrationFiles = fs.readdirSync(migrationsDir)
       .filter(file => file.endsWith('.sql'))
       .sort();

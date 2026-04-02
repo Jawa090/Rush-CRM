@@ -1,5 +1,4 @@
 const db = require('../../config/database');
-const emailService = require('../../services/emailService');
 
 // ==================== DASHBOARD ====================
 const getDashboardStats = async (req, res, next) => {
@@ -136,46 +135,15 @@ const getCampaigns = async (req, res, next) => {
 
 const createCampaign = async (req, res, next) => {
   try {
-    const { 
-      name, 
-      description, 
-      type, 
-      subject, 
-      content, 
-      list_id, 
-      segment_id, 
-      scheduled_at,
-      channel,
-      campaign_type,
-      from_name,
-      from_email,
-      status
-    } = req.body;
+    const { name, description, type, subject, content, list_id, segment_id, scheduled_at } = req.body;
 
     const result = await db.query(
       `INSERT INTO marketing_campaigns (
         org_id, name, description, type, subject, content, 
-        list_id, segment_id, scheduled_at, status, created_by,
-        channel, campaign_type, from_name, from_email
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        list_id, segment_id, scheduled_at, status, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
       RETURNING *`,
-      [
-        req.user.orgId, 
-        name, 
-        description, 
-        type || campaign_type || 'email', 
-        subject, 
-        content, 
-        list_id, 
-        segment_id, 
-        scheduled_at, 
-        status || 'draft', 
-        req.user.id,
-        channel || 'email',
-        campaign_type || 'email',
-        from_name,
-        from_email
-      ]
+      [req.user.orgId, name, description, type || 'email', subject, content, list_id, segment_id, scheduled_at, req.user.id]
     );
 
     res.status(201).json({ data: result.rows[0] });
@@ -420,259 +388,6 @@ const deleteSequence = async (req, res, next) => {
   }
 };
 
-// ==================== LIST MEMBERS ====================
-const getListMembers = async (req, res, next) => {
-  try {
-    const { listId } = req.params;
-    
-    const result = await db.query(
-      `SELECT lm.*, c.email, c.first_name, c.last_name, c.company
-       FROM marketing_list_members lm
-       LEFT JOIN contacts c ON lm.contact_id = c.id
-       WHERE lm.list_id = $1
-       ORDER BY lm.added_at DESC`,
-      [listId]
-    );
-
-    res.json({ data: result.rows });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const addListMembers = async (req, res, next) => {
-  try {
-    const { listId } = req.params;
-    const { contacts } = req.body; // Array of { email, first_name, last_name, company }
-
-    if (!Array.isArray(contacts) || contacts.length === 0) {
-      return res.status(400).json({ error: 'Contacts array is required' });
-    }
-
-    const addedContacts = [];
-    
-    for (const contact of contacts) {
-      // Check if contact exists
-      let contactResult = await db.query(
-        'SELECT id FROM contacts WHERE email = $1 AND org_id = $2',
-        [contact.email, req.user.orgId]
-      );
-
-      let contactId;
-      if (contactResult.rows.length === 0) {
-        // Create new contact
-        const newContact = await db.query(
-          `INSERT INTO contacts (org_id, email, first_name, last_name, company, created_at)
-           VALUES ($1, $2, $3, $4, $5, NOW())
-           RETURNING id`,
-          [req.user.orgId, contact.email, contact.first_name || null, contact.last_name || null, contact.company || null]
-        );
-        contactId = newContact.rows[0].id;
-      } else {
-        contactId = contactResult.rows[0].id;
-      }
-
-      // Add to list (ignore if already exists)
-      await db.query(
-        `INSERT INTO marketing_list_members (list_id, contact_id, added_at)
-         VALUES ($1, $2, NOW())
-         ON CONFLICT (list_id, contact_id) DO NOTHING`,
-        [listId, contactId]
-      );
-
-      addedContacts.push({ contactId, email: contact.email });
-    }
-
-    res.json({ 
-      message: `${addedContacts.length} contacts added to list`,
-      data: addedContacts 
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const exportListMembers = async (req, res, next) => {
-  try {
-    const { listId } = req.params;
-    
-    const result = await db.query(
-      `SELECT c.email, c.first_name, c.last_name, c.company, c.phone, c.lifecycle_stage
-       FROM marketing_list_members lm
-       JOIN contacts c ON lm.contact_id = c.id
-       WHERE lm.list_id = $1
-       ORDER BY c.email`,
-      [listId]
-    );
-
-    // Convert to CSV
-    const headers = ['email', 'first_name', 'last_name', 'company', 'phone', 'lifecycle_stage'];
-    const csvRows = [headers.join(',')];
-    
-    result.rows.forEach(row => {
-      const values = headers.map(header => {
-        const value = row[header] || '';
-        // Escape commas and quotes
-        return `"${String(value).replace(/"/g, '""')}"`;
-      });
-      csvRows.push(values.join(','));
-    });
-
-    const csv = csvRows.join('\n');
-    
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="list-${listId}-export.csv"`);
-    res.send(csv);
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ==================== EMAIL SENDING ====================
-const sendCampaign = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-
-    // Get campaign details
-    const campaignResult = await db.query(
-      'SELECT * FROM marketing_campaigns WHERE id = $1 AND org_id = $2',
-      [id, req.user.orgId]
-    );
-
-    if (campaignResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Campaign not found' });
-    }
-
-    const campaign = campaignResult.rows[0];
-
-    // Get contacts from list
-    let contacts = [];
-    if (campaign.list_id) {
-      const contactsResult = await db.query(
-        `SELECT c.* FROM contacts c
-         JOIN marketing_list_members lm ON c.id = lm.contact_id
-         WHERE lm.list_id = $1 AND c.org_id = $2`,
-        [campaign.list_id, req.user.orgId]
-      );
-      contacts = contactsResult.rows;
-    }
-
-    if (contacts.length === 0) {
-      return res.status(400).json({ error: 'No contacts found in the selected list' });
-    }
-
-    // Send emails
-    const results = await emailService.sendCampaign(campaign, contacts);
-
-    // Update campaign stats
-    const successCount = results.filter(r => r.success).length;
-    await db.query(
-      `UPDATE marketing_campaigns 
-       SET sent_count = sent_count + $1, status = 'sent', updated_at = NOW()
-       WHERE id = $2`,
-      [successCount, id]
-    );
-
-    // Log campaign events
-    for (const result of results) {
-      if (result.success) {
-        await db.query(
-          `INSERT INTO marketing_campaign_events 
-           (campaign_id, email, event_type, created_at)
-           VALUES ($1, $2, 'sent', NOW())`,
-          [id, result.email]
-        );
-      }
-    }
-
-    res.json({
-      success: true,
-      message: `Campaign sent to ${successCount} contacts`,
-      results: {
-        total: contacts.length,
-        sent: successCount,
-        failed: results.filter(r => !r.success).length,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const sendTestEmail = async (req, res, next) => {
-  try {
-    const { campaignId, testEmail } = req.body;
-
-    if (!testEmail) {
-      return res.status(400).json({ error: 'Test email address is required' });
-    }
-
-    // Get campaign
-    const result = await db.query(
-      'SELECT * FROM marketing_campaigns WHERE id = $1 AND org_id = $2',
-      [campaignId, req.user.orgId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Campaign not found' });
-    }
-
-    const campaign = result.rows[0];
-
-    // Send test email
-    await emailService.sendEmail({
-      to: testEmail,
-      subject: `[TEST] ${campaign.subject}`,
-      html: campaign.content,
-      from: campaign.from_email,
-    });
-
-    res.json({ success: true, message: 'Test email sent successfully' });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const trackEmailEvent = async (req, res, next) => {
-  try {
-    const { campaignId, email, eventType } = req.body;
-
-    // Log event
-    await db.query(
-      `INSERT INTO marketing_campaign_events 
-       (campaign_id, email, event_type, created_at)
-       VALUES ($1, $2, $3, NOW())`,
-      [campaignId, email, eventType]
-    );
-
-    // Update campaign stats
-    if (eventType === 'opened') {
-      await db.query(
-        'UPDATE marketing_campaigns SET opened_count = opened_count + 1 WHERE id = $1',
-        [campaignId]
-      );
-    } else if (eventType === 'clicked') {
-      await db.query(
-        'UPDATE marketing_campaigns SET clicked_count = clicked_count + 1 WHERE id = $1',
-        [campaignId]
-      );
-    }
-
-    res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const verifyEmailConfig = async (req, res, next) => {
-  try {
-    const result = await emailService.verifyConnection();
-    res.json(result);
-  } catch (err) {
-    next(err);
-  }
-};
-
 // ==================== ANALYTICS ====================
 const getAnalytics = async (req, res, next) => {
   try {
@@ -765,9 +480,6 @@ module.exports = {
   getLists,
   createList,
   deleteList,
-  getListMembers,
-  addListMembers,
-  exportListMembers,
   getForms,
   createForm,
   deleteForm,
@@ -776,8 +488,4 @@ module.exports = {
   updateSequence,
   deleteSequence,
   getAnalytics,
-  sendCampaign,
-  sendTestEmail,
-  trackEmailEvent,
-  verifyEmailConfig,
 };
