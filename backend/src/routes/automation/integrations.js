@@ -1,71 +1,23 @@
 const express = require('express');
 const router = express.Router();
-const _authModule = require('../../middleware/auth');
-const _auth = _authModule?.auth;
-const _requireOrg = _authModule?.requireOrg;
-if (typeof _auth !== 'function' || typeof _requireOrg !== 'function') {
-  throw new Error('Auth middleware exports are not functions');
-}
-// Apply global auth and org scoping with safety checks
-router.use(_auth);
-router.use(_requireOrg);
+const { auth, requireOrg } = require('../../middleware/auth');
+const integrationsController = require('../../controllers/automation/integrationsController');
 
-router.post('/google/exchange-code', async (req, res, next) => {
-  try {
-    const { code, redirectUri } = req.body;
-    res.json({ error: 'Google integration not yet implemented', message: 'OAuth flow needs backend implementation' });
-  } catch (error) {
-    next(error);
-  }
-});
+// All routes require authentication
+router.use(auth);
+router.use(requireOrg);
 
-router.post('/gmail/exchange-code', async (req, res, next) => {
-  try {
-    const { code } = req.body;
-    res.json({ error: 'Gmail integration not yet implemented', message: 'OAuth flow needs backend implementation' });
-  } catch (error) {
-    next(error);
-  }
-});
+// Google
+router.post('/google/exchange-code', integrationsController.exchangeGoogleCode);
+router.post('/gmail/exchange-code', integrationsController.exchangeGmailCode);
+router.post('/google-calendar/exchange-code', integrationsController.exchangeGoogleCalendarCode);
 
-router.post('/google-calendar/exchange-code', async (req, res, next) => {
-  try {
-    const { code, redirectUri } = req.body;
-    res.json({ error: 'Google Calendar integration not yet implemented', message: 'OAuth flow needs backend implementation' });
-  } catch (error) {
-    next(error);
-  }
-});
+// Microsoft
+router.post('/microsoft/exchange-code', integrationsController.exchangeMicrosoftCode);
+router.post('/outlook/exchange-code', integrationsController.exchangeOutlookCode);
+router.post('/onedrive/exchange-code', integrationsController.exchangeOneDriveCode);
 
-router.post('/microsoft/exchange-code', async (req, res, next) => {
-  try {
-    const { code } = req.body;
-    res.json({ error: 'Microsoft integration not yet implemented', message: 'OAuth flow needs backend implementation' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/outlook/exchange-code', async (req, res, next) => {
-  try {
-    const { code } = req.body;
-    res.json({ error: 'Outlook integration not yet implemented', message: 'OAuth flow needs backend implementation' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/onedrive/exchange-code', async (req, res, next) => {
-  try {
-    const { code } = req.body;
-    res.json({ error: 'OneDrive integration not yet implemented', message: 'OAuth flow needs backend implementation' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/instantly', async (req, res) => {
-  res.status(501).json({ error: 'Instantly integration not implemented. Configure integration service or remove this call.' });
-});
+// Others
+router.post('/instantly', integrationsController.handleInstantly);
 
 module.exports = router;

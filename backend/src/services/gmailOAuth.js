@@ -90,7 +90,7 @@ class GmailOAuthService {
     }
 
     try {
-      const { tokens } = await this.oauth2Client.getAccessToken(code);
+      const { tokens } = await this.oauth2Client.getToken(code);
       return tokens;
     } catch (error) {
       console.error('Error exchanging code for tokens:', error);
@@ -144,23 +144,120 @@ class GmailOAuthService {
     }
 
     try {
-      this.oauth2Client.setCredentials({ access_token: accessToken });
       const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
-      
-      // Try to get user profile to test connection
-      const profile = await gmail.users.getProfile({ userId: 'me' });
-      return {
-        success: true,
-        emailAddress: profile.data.emailAddress,
-        messagesTotal: profile.data.messagesTotal,
-        threadsTotal: profile.data.threadsTotal
-      };
+      this.oauth2Client.setCredentials({ access_token: accessToken });
+      await gmail.users.getProfile({ userId: 'me' });
+      return { success: true };
     } catch (error) {
-      console.error('Error testing Gmail connection:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      console.error('Gmail connection test failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * List messages from Gmail
+   */
+  async listMessages(accessToken, options = {}) {
+    if (!this.oauth2Client) {
+      throw new Error('Google OAuth not configured');
+    }
+    const { maxResults = 50, q = '' } = options;
+    const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+    this.oauth2Client.setCredentials({ access_token: accessToken });
+    
+    const response = await gmail.users.messages.list({
+      userId: 'me',
+      maxResults,
+      q,
+    });
+    
+    return response.data;
+  }
+
+  /**
+   * Get specific message details
+   */
+  async getMessage(accessToken, messageId) {
+    if (!this.oauth2Client) {
+      throw new Error('Google OAuth not configured');
+    }
+    const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+    this.oauth2Client.setCredentials({ access_token: accessToken });
+    
+    const response = await gmail.users.messages.get({
+      userId: 'me',
+      id: messageId,
+      format: 'full',
+    });
+    
+    return response.data;
+  }
+
+  /**
+   * Send an email using Gmail API
+   */
+  async sendEmail(accessToken, refreshToken, { to, subject, body, html, attachments = [] }) {
+    if (!this.oauth2Client) {
+      throw new Error('Google OAuth not configured');
+    }
+
+    try {
+      this.oauth2Client.setCredentials({ 
+        access_token: accessToken,
+        refresh_token: refreshToken
+      });
+      const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+
+      const boundary = 'foo_bar_baz' + Date.now();
+      const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+      
+      let message = [
+        `To: ${to}`,
+        `Subject: ${utf8Subject}`,
+        'MIME-Version: 1.0',
+        `Content-Type: multipart/mixed; boundary="${boundary}"`,
+        '',
+        `--${boundary}`,
+        'Content-Type: text/html; charset=utf-8',
+        'MIME-Version: 1.0',
+        'Content-Transfer-Encoding: base64',
+        '',
+        Buffer.from(html || body).toString('base64'),
+        '',
+      ].join('\r\n');
+
+      for (const attachment of attachments) {
+        const { filename, content, mimeType } = attachment;
+        message += [
+          `--${boundary}`,
+          `Content-Type: ${mimeType}; name="${filename}"`,
+          'Content-Transfer-Encoding: base64',
+          `Content-Disposition: attachment; filename="${filename}"`,
+          '',
+          content, // Already base64 from backend controller
+          '',
+        ].join('\r\n');
+      }
+
+      message += `--${boundary}--`;
+
+      const encodedMessage = Buffer.from(message)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: encodedMessage,
+        },
+      });
+
+      return res.data;
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new Error('Failed to send email via Google');
     }
   }
 }

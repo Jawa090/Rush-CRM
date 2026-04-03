@@ -215,6 +215,54 @@ const removeMember = async (req, res, next) => {
   }
 };
 
+const getComments = async (req, res, next) => {
+  try {
+    const { entity_type, entity_id } = req.query;
+    const tableCheck = await db.query(
+      `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'project_comments')`
+    );
+    if (!tableCheck.rows[0].exists) return res.json([]);
+    const { rows } = await db.query(
+      'SELECT * FROM project_comments WHERE entity_type = $1 AND entity_id = $2 AND org_id = $3 ORDER BY created_at ASC',
+      [entity_type, entity_id, req.user.orgId]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Project comments error:', err);
+    res.json([]);
+  }
+};
+
+const createComment = async (req, res, next) => {
+  try {
+    const { content, entity_type, entity_id } = req.body;
+    if (!content) return res.status(400).json({ error: 'Content required' });
+    const tableCheck = await db.query(
+      `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'project_comments')`
+    );
+    if (!tableCheck.rows[0].exists) return res.status(501).json({ error: 'Comments feature not available' });
+    const { rows } = await db.query(
+      'INSERT INTO project_comments (content, entity_type, entity_id, org_id, user_id) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+      [content, entity_type, entity_id, req.user.orgId, req.user.id]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('Project comments creation error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const getProjectReport = async (req, res, next) => {
+  try {
+    const projectId = req.params.token; // treating token as project id for now
+    const { rows: projectRows } = await db.query('SELECT * FROM public.projects WHERE id = $1 AND org_id = $2', [projectId, req.user.orgId]);
+    if (!projectRows.length) return res.status(404).json({ error: 'Project not found' });
+    const project = projectRows[0];
+    const { rows: taskRows } = await db.query('SELECT * FROM public.tasks WHERE project_id = $1 AND org_id = $2 ORDER BY sort_order ASC', [projectId, req.user.orgId]);
+    res.json({ project, milestones: [], tasks: taskRows, permissions: { canEdit: true } });
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getAll,
   getStats,
@@ -225,4 +273,7 @@ module.exports = {
   getMembers,
   addMember,
   removeMember,
+  getComments,
+  createComment,
+  getProjectReport
 };

@@ -1,5 +1,7 @@
 const db = require('../../config/database');
 const googleCalendarService = require('../../services/googleCalendarService');
+const gmailOAuthService = require('../../services/gmailOAuth');
+const emailSenderService = require('../../services/emailSenderService');
 
 const getEvents = async (req, res, next) => {
   try {
@@ -56,7 +58,7 @@ const getById = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const { title, description, startTime, endTime, location, color, allDay, recurrence } = req.body;
+    const { title, description, startTime, endTime, location, color, allDay, recurrence, attendees } = req.body;
 
     const result = await db.query(
       `INSERT INTO public.calendar_events (org_id, created_by, title, description, start_time, end_time, location, color, is_all_day, recurrence_rule)
@@ -65,7 +67,31 @@ const create = async (req, res, next) => {
       [req.user.orgId, req.user.id, title, description, startTime, endTime, location, color, allDay || false, recurrence]
     );
 
-    res.status(201).json(result.rows[0]);
+    const event = result.rows[0];
+
+    // Send emails if attendees are present using the Unified Email System
+    if (attendees && attendees.length > 0) {
+      console.log('Sending invitation emails to:', attendees);
+      for (const email of attendees) {
+        try {
+          const sent = await emailSenderService.send(req.user.id, {
+            to: email,
+            subject: `Invitation: ${title}`,
+            html: `
+              <p><b>Sender:</b> ${req.user.email}</p>
+              <p><b>Event:</b> ${title}</p>
+              <p><b>Date:</b> ${new Date(startTime).toLocaleString()} - ${new Date(endTime).toLocaleString()}</p>
+              <p><b>Schedule:</b> invite.ics</p>
+            `
+          });
+          console.log(`Email sent to ${email}:`, sent.success);
+        } catch (emailErr) {
+          console.error(`Failed to send email to ${email}:`, emailErr);
+        }
+      }
+    }
+
+    res.status(201).json(event);
   } catch (err) {
     next(err);
   }
@@ -191,12 +217,28 @@ const googleAuthCallback = async (req, res, next) => {
     }
 
     res.send(`
-      <script>
-        window.opener.postMessage('google-calendar-connected', '*');
-        window.close();
-      </script>
-      <h1>Google Calendar Connected!</h1>
-      <p>You can close this window now.</p>
+      <html>
+      <body style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #f0f7ff; color: #1e3a8a;">
+        <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); text-align: center;">
+          <h1 style="margin-bottom: 0.5rem;">✅ Calendar Connected!</h1>
+          <p>Syncing your events and closing this window...</p>
+          <div style="margin: 1.5rem auto; width: 40px; height: 40px; border: 4px solid #3b82f6; border-top-color: transparent; border-radius: 50%; animate: spin 1s linear infinite;"></div>
+        </div>
+        <script>
+          setTimeout(() => {
+            if (window.opener) {
+              window.opener.postMessage('google-calendar-connected', '*');
+            }
+            window.close();
+          }, 1500);
+          
+          // Fallback animation
+          const style = document.createElement('style');
+          style.innerHTML = '@keyframes spin { to { transform: rotate(360deg); } }';
+          document.head.appendChild(style);
+        </script>
+      </body>
+      </html>
     `);
   } catch (err) {
     console.error('OAuth Callback Error:', err.response?.data || err);
@@ -211,9 +253,14 @@ const googleAuthCallback = async (req, res, next) => {
 
 const disconnectByProvider = async (req, res, next) => {
   try {
-    const { provider } = req.query;
+    const { provider } = req.body;
     await db.query(
       'DELETE FROM public.calendar_connections WHERE org_id = $1 AND user_id = $2 AND provider = $3',
+      [req.user.orgId, req.user.id, provider]
+    );
+    // Also delete events from this provider
+    await db.query(
+      'DELETE FROM public.calendar_events WHERE org_id = $1 AND created_by = $2 AND external_provider = $3',
       [req.user.orgId, req.user.id, provider]
     );
     res.json({ message: 'Calendar disconnected' });

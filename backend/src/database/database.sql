@@ -1104,6 +1104,14 @@ CREATE TABLE IF NOT EXISTS connected_mailboxes (
   token_expires_at TIMESTAMP WITH TIME ZONE,
   is_active BOOLEAN DEFAULT true,
   sync_status VARCHAR(50) DEFAULT 'connected',
+  last_sync_at TIMESTAMP WITH TIME ZONE,
+  imap_host VARCHAR(255),
+  imap_port INTEGER,
+  smtp_host VARCHAR(255),
+  smtp_port INTEGER,
+  imap_username VARCHAR(255),
+  smtp_username VARCHAR(255),
+  encrypted_password TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   UNIQUE(org_id, user_id, email_address)
@@ -1723,6 +1731,35 @@ CREATE TABLE IF NOT EXISTS calendar_connections (
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Mailbox messages table for real-time sync
+CREATE TABLE IF NOT EXISTS emails (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  mailbox_id UUID REFERENCES connected_mailboxes(id) ON DELETE CASCADE,
+  message_id VARCHAR(255),
+  thread_id VARCHAR(255),
+  folder VARCHAR(50) DEFAULT 'inbox',
+  from_name VARCHAR(255),
+  from_address VARCHAR(255) NOT NULL,
+  to_address VARCHAR(255),
+  subject VARCHAR(500),
+  snippet TEXT,
+  body_text TEXT,
+  body_html TEXT,
+  received_at TIMESTAMPTZ DEFAULT now(),
+  is_read BOOLEAN DEFAULT false,
+  is_starred BOOLEAN DEFAULT false,
+  has_attachments BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_emails_user_id ON emails(user_id);
+CREATE INDEX IF NOT EXISTS idx_emails_mailbox_id ON emails(mailbox_id);
+CREATE INDEX IF NOT EXISTS idx_emails_folder ON emails(folder);
+CREATE INDEX IF NOT EXISTS idx_emails_received_at ON emails(received_at DESC);
 
 -- Event attendees table
 CREATE TABLE IF NOT EXISTS event_attendees (

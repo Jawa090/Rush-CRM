@@ -25,6 +25,7 @@ const getAuthUrl = (userId, orgId) => {
     'https://www.googleapis.com/auth/calendar.readonly',
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/gmail.send',
   ];
 
   return oauth2Client.generateAuthUrl({
@@ -69,15 +70,51 @@ const listEvents = async (accessToken, refreshToken, startDate, endDate) => {
 
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
   
-  const response = await calendar.events.list({
+  const listParams = {
     calendarId: 'primary',
     timeMin: startDate || new Date().toISOString(),
-    timeMax: endDate,
     singleEvents: true,
     orderBy: 'startTime',
-  });
+  };
+
+  if (endDate) {
+    listParams.timeMax = endDate;
+  }
+
+  const response = await calendar.events.list(listParams);
 
   return response.data.items;
+};
+
+const createEvent = async (accessToken, refreshToken, eventData) => {
+  const oauth2Client = createOAuthClient();
+  oauth2Client.setCredentials({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  
+  const response = await calendar.events.insert({
+    calendarId: 'primary',
+    requestBody: {
+      summary: eventData.title,
+      description: eventData.description,
+      location: eventData.location,
+      start: {
+        dateTime: eventData.startTime,
+        timeZone: 'UTC',
+      },
+      end: {
+        dateTime: eventData.endTime,
+        timeZone: 'UTC',
+      },
+      attendees: eventData.attendees ? eventData.attendees.map(email => ({ email })) : [],
+    },
+    sendUpdates: 'none', // We send our own simplified email from the CRM
+  });
+
+  return response.data;
 };
 
 module.exports = {
@@ -85,4 +122,5 @@ module.exports = {
   handleCallback,
   getUserInfo,
   listEvents,
+  createEvent,
 };
