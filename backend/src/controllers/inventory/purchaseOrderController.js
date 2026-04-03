@@ -28,12 +28,13 @@ const getAll = async (req, res, next) => {
       paramIndex++;
     }
 
-    query += ` GROUP BY po.id, v.name ORDER BY po.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` GROUP BY po.id, v.id, v.name ORDER BY po.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
 
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (err) {
+    console.error('Purchase Order getAll error:', err);
     next(err);
   }
 };
@@ -73,20 +74,38 @@ const getById = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const { vendorId, items, notes, expectedDeliveryDate, status } = req.body;
+    const { vendorId, items, notes, expectedDeliveryDate, status, taxAmount, shippingCost, discountAmount } = req.body;
 
-    const totalAmount = items && items.length > 0
+    // Calculate subtotal from items
+    const subtotal = items && items.length > 0
       ? items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0)
       : req.body.totalAmount || 0;
+
+    // Calculate total amount
+    const tax = taxAmount || 0;
+    const shipping = shippingCost || 0;
+    const discount = discountAmount || 0;
+    const totalAmount = subtotal + tax + shipping - discount;
 
     const validStatuses = ['pending', 'approved', 'ordered', 'received', 'cancelled'];
     const orderStatus = validStatuses.includes(status) ? status : 'pending';
 
+    // Generate PO number
+    const poCountResult = await db.query(
+      'SELECT COUNT(*) as count FROM public.purchase_orders WHERE org_id = $1',
+      [req.user.orgId]
+    );
+    const poNumber = `PO-${String(parseInt(poCountResult.rows[0].count) + 1).padStart(6, '0')}`;
+
     const orderResult = await db.query(
-      `INSERT INTO public.purchase_orders (org_id, created_by, vendor_id, total_amount, notes, expected_delivery, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO public.purchase_orders (
+        org_id, created_by, vendor_id, po_number, order_date, 
+        subtotal, tax_amount, shipping_cost, discount_amount, total_amount, 
+        notes, expected_delivery, status
+      )
+       VALUES ($1, $2, $3, $4, CURRENT_DATE, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
-      [req.user.orgId, req.user.id, vendorId, totalAmount, notes, expectedDeliveryDate || null, orderStatus]
+      [req.user.orgId, req.user.id, vendorId, poNumber, subtotal, tax, shipping, discount, totalAmount, notes, expectedDeliveryDate || null, orderStatus]
     );
 
     const orderId = orderResult.rows[0].id;
@@ -103,6 +122,7 @@ const create = async (req, res, next) => {
 
     res.status(201).json(orderResult.rows[0]);
   } catch (err) {
+    console.error('Purchase Order create error:', err);
     next(err);
   }
 };

@@ -7,6 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -60,6 +63,13 @@ export default function EmployeeDetailPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [uploadDialog, setUploadDialog] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    document_type: 'CNIC',
+    document_name: '',
+    file: null as File | null,
+  });
 
   useEffect(() => {
     fetchEmployee();
@@ -97,6 +107,46 @@ export default function EmployeeDetailPage() {
       console.error('Error fetching documents:', error);
       // Don't show error toast for documents, just log it
       setDocuments([]);
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!uploadForm.file) {
+      toast.error('Please select a file');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadForm.file);
+      formData.append('document_type', uploadForm.document_type);
+      formData.append('document_name', uploadForm.document_name || uploadForm.file.name);
+
+      await api.post(`/employees/${id}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      toast.success('Document uploaded successfully');
+      setUploadDialog(false);
+      setUploadForm({ document_type: 'CNIC', document_name: '', file: null });
+      fetchDocuments();
+    } catch (error: any) {
+      toast.error('Failed to upload document', {
+        description: error?.response?.data?.error || 'Please try again',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    try {
+      await api.delete(`/employees/${id}/documents/${docId}`);
+      toast.success('Document deleted successfully');
+      fetchDocuments();
+    } catch (error: any) {
+      toast.error('Failed to delete document');
     }
   };
 
@@ -628,7 +678,7 @@ export default function EmployeeDetailPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(`/hrms/employees/${id}/edit`)}
+                    onClick={() => setUploadDialog(true)}
                     className="gap-2"
                   >
                     <Upload className="h-4 w-4" />
@@ -644,7 +694,7 @@ export default function EmployeeDetailPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`/hrms/employees/${id}/edit`)}
+                      onClick={() => setUploadDialog(true)}
                       className="gap-2"
                     >
                       <Upload className="h-4 w-4" />
@@ -772,6 +822,85 @@ export default function EmployeeDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={uploadDialog} onOpenChange={setUploadDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Document</DialogTitle>
+            <DialogDescription>
+              Upload a document for {employee?.first_name} {employee?.last_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="document_type">Document Type</Label>
+              <select
+                id="document_type"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={uploadForm.document_type}
+                onChange={(e) => setUploadForm({ ...uploadForm, document_type: e.target.value })}
+              >
+                <option value="CNIC">CNIC</option>
+                <option value="Contract">Contract</option>
+                <option value="Resume">Resume</option>
+                <option value="Certificate">Certificate</option>
+                <option value="Degree">Degree</option>
+                <option value="Experience Letter">Experience Letter</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="document_name">Document Name (Optional)</Label>
+              <Input
+                id="document_name"
+                placeholder="e.g., CNIC Front Side"
+                value={uploadForm.document_name}
+                onChange={(e) => setUploadForm({ ...uploadForm, document_name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="file">Select File</Label>
+              <Input
+                id="file"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setUploadForm({ ...uploadForm, file });
+                }}
+              />
+              <p className="text-xs text-gray-500">
+                Supported: PDF, JPG, PNG, DOC, DOCX (Max 10MB)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUploadDialog(false);
+                setUploadForm({ document_type: 'CNIC', document_name: '', file: null });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUploadDocument} disabled={uploading || !uploadForm.file}>
+              {uploading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

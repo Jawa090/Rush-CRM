@@ -33,6 +33,7 @@ app.use(appRoutes);
 
 const db = require('./config/database');
 const realtimeService = require('./services/realtimeService');
+const scheduledWorkflows = require('./services/scheduledWorkflows');
 
 const PORT = process.env.PORT || 3001;
 
@@ -49,6 +50,9 @@ async function bootstrap() {
 
     // Initialize WebSocket
     realtimeService.initialize(server);
+    
+    // Start scheduled workflows
+    scheduledWorkflows.start();
     
   } catch (error) {
     console.error('Failed to connect to the database. Server shutting down...', error);

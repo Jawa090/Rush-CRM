@@ -1,5 +1,5 @@
 const db = require('../../config/database');
-const { fireWorkflows } = require('../../services/workflowEngine');
+const { fireWorkflows } = require('../../services/advancedWorkflowEngine');
 
 const getAll = async (req, res, next) => {
   try {
@@ -277,17 +277,21 @@ const remove = async (req, res, next) => {
 
 const createAction = async (req, res, next) => {
   try {
-    const { workflow_id, action_type, action_config, condition_config, sort_order } = req.body;
+    const { workflow_id, action_type, action_config, condition_config, sort_order, action_order } = req.body;
+    
+    // Use action_order if provided, otherwise sort_order, otherwise 0
+    const orderValue = action_order !== undefined ? action_order : (sort_order !== undefined ? sort_order : 0);
     
     const result = await db.query(
-      `INSERT INTO public.workflow_actions (workflow_id, org_id, action_type, action_config, condition_config, sort_order)
+      `INSERT INTO public.workflow_actions (workflow_id, org_id, action_type, action_config, condition_config, action_order)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [workflow_id, req.user.orgId, action_type, JSON.stringify(action_config || {}), condition_config ? JSON.stringify(condition_config) : null, sort_order || 0]
+      [workflow_id, req.user.orgId, action_type, JSON.stringify(action_config || {}), condition_config ? JSON.stringify(condition_config) : null, orderValue]
     );
     
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    console.error('Create workflow action error:', err);
     next(err);
   }
 };
@@ -295,18 +299,21 @@ const createAction = async (req, res, next) => {
 const updateAction = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { action_type, action_config, condition_config, sort_order } = req.body;
+    const { action_type, action_config, condition_config, sort_order, action_order } = req.body;
+    
+    // Use action_order if provided, otherwise sort_order
+    const orderValue = action_order !== undefined ? action_order : sort_order;
     
     const result = await db.query(
       `UPDATE public.workflow_actions 
        SET action_type = COALESCE($1, action_type),
            action_config = COALESCE($2, action_config),
            condition_config = COALESCE($3, condition_config),
-           sort_order = COALESCE($4, sort_order),
+           action_order = COALESCE($4, action_order),
            updated_at = now()
        WHERE id = $5
        RETURNING *`,
-      [action_type, action_config ? JSON.stringify(action_config) : null, condition_config ? JSON.stringify(condition_config) : null, sort_order, id]
+      [action_type, action_config ? JSON.stringify(action_config) : null, condition_config ? JSON.stringify(condition_config) : null, orderValue, id]
     );
     
     if (result.rows.length === 0) {
