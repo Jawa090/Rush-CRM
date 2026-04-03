@@ -7,6 +7,7 @@ router.use(auth, requireOrg);
 
 // Dashboard stats
 router.get('/dashboard', inventoryController.getDashboardStats);
+router.get('/stats', inventoryController.getDashboardStats);
 
 // Employee assignments
 router.get('/assignments', inventoryController.getEmployeeAssignments);

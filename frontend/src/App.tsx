@@ -166,7 +166,7 @@ const App = () => (
                   <Route path="/hrms/attendance" element={<AttendancePage />} />
                   <Route path="/hrms/employees" element={<EmployeesPage />} />
                   <Route path="/hrms/employees/create" element={<CreateEmployeePage />} />
-                  <Route path="/hrms/employees/edit/:id" element={<EditEmployeePage />} />
+                  <Route path="/hrms/employees/:id/edit" element={<EditEmployeePage />} />
                   <Route path="/hrms/employees/:id" element={<EmployeeDetailPage />} />
                   <Route path="/hrms/leave" element={<LeaveManagementPage />} />
                   <Route path="/hrms/payroll" element={<PayrollPage />} />
