@@ -31,8 +31,8 @@ function deriveStatus(stock: number, min = 5) {
   return "in_stock";
 }
 
-type ProductRow = { id: string; name: string; sku: string; category: string; price: number; stock: number; minStock: number; status: string; };
-const BLANK: ProductRow = { id: "temp", name: "", sku: "", category: "Uncategorized", price: 0, stock: 0, minStock: 5, status: "in_stock" };
+type ProductRow = { id: string; name: string; sku: string; category: string; price: number | string; stock: number | string; minStock: number | string; status: string; description?: string; unit?: string; };
+const BLANK: ProductRow = { id: "temp", name: "", sku: "", category: "Uncategorized", price: "", stock: "", minStock: "", status: "in_stock", description: "", unit: "piece" };
 
 export default function ProductsPage() {
   const [search, setSearch] = useState("");
@@ -53,10 +53,20 @@ export default function ProductsPage() {
   const adjustStock = useAdjustStock();
 
   useEffect(() => {
-    const list = Array.isArray(productsData) ? productsData : (productsData as any) || [];
+    const list = Array.isArray(productsData) ? productsData : (productsData as any)?.data || [];
     setRows(list.map((p: any) => {
       const stock = Number(p.total_stock ?? p.stock_quantity ?? p.stock ?? 0);
-      return { id: String(p.id), name: p.name ?? "Untitled", sku: p.sku ?? "—", category: p.category ?? "Uncategorized", price: Number(p.unit_price ?? p.price ?? 0), stock, minStock: p.min_stock ?? 5, status: p.status ?? deriveStatus(stock, p.min_stock) };
+      const minStock = Number(p.min_stock_level ?? p.min_stock ?? 5);
+      return { 
+        id: String(p.id), 
+        name: p.name ?? "Untitled", 
+        sku: p.sku ?? "—", 
+        category: p.category ?? "Uncategorized", 
+        price: Number(p.price ?? 0), 
+        stock, 
+        minStock, 
+        status: p.status ?? deriveStatus(stock, minStock) 
+      };
     }));
   }, [productsData]);
 
@@ -81,11 +91,30 @@ export default function ProductsPage() {
   const handleSave = async () => {
     if (!form.name.trim()) { toast({ title: "Name required", variant: "destructive" }); return; }
     try {
-      const data = { name: form.name, sku: form.sku, category: form.category, price: form.price, min_stock_level: form.minStock, status: "active" };
-      if (editing) await updateProduct.mutateAsync({ id: form.id, ...data });
-      else await createProduct.mutateAsync(data);
-      refetch(); setDialog(false); setEditing(null);
-    } catch (e: any) { toast({ title: "Error", description: e.message, variant: "destructive" }); }
+      const data = { 
+        name: form.name, 
+        sku: form.sku || `SKU-${Date.now()}`, 
+        category: form.category, 
+        price: Number(form.price) || 0, 
+        cost: 0,
+        unit: form.unit || 'piece',
+        min_stock_level: Number(form.minStock) || 0,
+        initial_stock: Number(form.stock) || 0,
+        description: form.description || '',
+        status: "active" 
+      };
+      if (editing) {
+        await updateProduct.mutateAsync({ id: form.id, ...data });
+      } else {
+        await createProduct.mutateAsync(data);
+      }
+      refetch(); 
+      setDialog(false); 
+      setEditing(null);
+      toast({ title: editing ? "Product updated" : "Product added successfully" });
+    } catch (e: any) { 
+      toast({ title: "Error", description: e.message, variant: "destructive" }); 
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -223,12 +252,19 @@ export default function ProductsPage() {
 
       {/* Add/Edit dialog */}
       <Dialog open={dialog} onOpenChange={(o) => { setDialog(o); if (!o) { setEditing(null); } }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>{editing ? "Edit Product" : "Add Product"}</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-1">
-            <div className="space-y-1.5"><Label>Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Product name" /></div>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>{editing ? "Edit Product" : "Add New Product"}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Product Name *</Label>
+              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Enter product name" />
+            </div>
+            
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5"><Label>SKU</Label><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="SKU-001" /></div>
+              <div className="space-y-1.5">
+                <Label>SKU Code</Label>
+                <Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="e.g., SKU-001" />
+              </div>
               <div className="space-y-1.5">
                 <Label>Category</Label>
                 <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
@@ -237,16 +273,66 @@ export default function ProductsPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1.5"><Label>Price ($)</Label><Input type="number" min={0} step={0.01} value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} /></div>
-              <div className="space-y-1.5"><Label>Stock</Label><Input type="number" min={0} value={form.stock} onChange={(e) => setForm({ ...form, stock: Number(e.target.value) })} /></div>
-              <div className="space-y-1.5"><Label>Min Stock</Label><Input type="number" min={0} value={form.minStock} onChange={(e) => setForm({ ...form, minStock: Number(e.target.value) })} /></div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Unit Price ($)</Label>
+                <Input 
+                  type="number" 
+                  min={0} 
+                  step={0.01} 
+                  value={form.price} 
+                  onChange={(e) => setForm({ ...form, price: e.target.value })} 
+                  placeholder="Enter price" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Unit Type</Label>
+                <Select value={form.unit || "piece"} onValueChange={(v) => setForm({ ...form, unit: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select unit" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="piece">Piece</SelectItem>
+                    <SelectItem value="box">Box</SelectItem>
+                    <SelectItem value="kg">Kilogram</SelectItem>
+                    <SelectItem value="liter">Liter</SelectItem>
+                    <SelectItem value="meter">Meter</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Initial Stock Quantity</Label>
+                <Input 
+                  type="number" 
+                  min={0} 
+                  value={form.stock} 
+                  onChange={(e) => setForm({ ...form, stock: e.target.value })} 
+                  placeholder="Enter quantity" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Minimum Stock Level</Label>
+                <Input 
+                  type="number" 
+                  min={0} 
+                  value={form.minStock} 
+                  onChange={(e) => setForm({ ...form, minStock: e.target.value })} 
+                  placeholder="Enter minimum level" 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Description (Optional)</Label>
+              <Input value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Product description or notes" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" onClick={() => setDialog(false)}>Cancel</Button>
             <Button size="sm" onClick={handleSave} disabled={createProduct.isPending || updateProduct.isPending}>
-              {(createProduct.isPending || updateProduct.isPending) ? "Saving..." : editing ? "Update" : "Create"}
+              {(createProduct.isPending || updateProduct.isPending) ? "Saving..." : editing ? "Update Product" : "Add Product"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -105,21 +105,65 @@ const getById = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const { name, sku, description, category, price, cost, unit, min_stock_level, status } = req.body;
+    const { name, sku, description, category, price, cost, unit, min_stock_level, status, initial_stock } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Product name is required' });
     }
 
-    const result = await db.query(
-      `INSERT INTO public.products (
-        org_id, name, sku, description, category, price, cost, unit, min_stock_level, status, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING *`,
-      [req.user.orgId, name, sku, description, category, price, cost, unit, min_stock_level, status || 'active', req.user.id]
-    );
+    // Start transaction
+    const client = await db.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
 
-    res.status(201).json(result.rows[0]);
+      // Create product
+      const productResult = await client.query(
+        `INSERT INTO public.products (
+          org_id, name, sku, description, category, price, cost, unit, min_stock_level, status, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING *`,
+        [req.user.orgId, name, sku, description, category, price || 0, cost || 0, unit || 'piece', min_stock_level || 10, status || 'active', req.user.id]
+      );
+
+      const product = productResult.rows[0];
+
+      // If initial stock is provided, update stock table
+      if (initial_stock && initial_stock > 0) {
+        // Get first warehouse for this org
+        const warehouseResult = await client.query(
+          'SELECT id FROM warehouses WHERE org_id = $1 LIMIT 1',
+          [req.user.orgId]
+        );
+
+        if (warehouseResult.rows.length > 0) {
+          const warehouseId = warehouseResult.rows[0].id;
+          
+          // Update stock quantity
+          await client.query(
+            `UPDATE stock 
+             SET quantity = $1 
+             WHERE product_id = $2 AND warehouse_id = $3 AND org_id = $4`,
+            [initial_stock, product.id, warehouseId, req.user.orgId]
+          );
+
+          // Log stock movement
+          await client.query(
+            `INSERT INTO stock_movements (org_id, product_id, warehouse_id, movement_type, quantity, reason, created_by)
+             VALUES ($1, $2, $3, 'stock_in', $4, 'Initial stock', $5)`,
+            [req.user.orgId, product.id, warehouseId, initial_stock, req.user.id]
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+      res.status(201).json(product);
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     next(err);
   }

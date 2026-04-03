@@ -32,6 +32,7 @@ app.use('/api/', limiter);
 app.use(appRoutes);
 
 const db = require('./config/database');
+const realtimeService = require('./services/realtimeService');
 
 const PORT = process.env.PORT || 3001;
 
@@ -41,10 +42,14 @@ async function bootstrap() {
     await db.query('SELECT 1');
     console.log('Database connected successfully.');
     
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Server running successfully on port ${PORT}`);
       console.log(`API Health Check: http://localhost:${PORT}/api/health`);
     });
+
+    // Initialize WebSocket
+    realtimeService.initialize(server);
+    
   } catch (error) {
     console.error('Failed to connect to the database. Server shutting down...', error);
     process.exit(1);

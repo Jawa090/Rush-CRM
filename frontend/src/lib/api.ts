@@ -231,6 +231,15 @@ export const leaveApi = {
   delete: (id: string) => api.delete(`/leave/${id}`),
 };
 
+export const payrollApi = {
+  getSalarySlips: (params?: { month?: number; year?: number; employee_id?: string }) => 
+    api.get<{ data: any[] }>('/payroll/slips', params),
+  getSalarySlipById: (id: string) => api.get<{ data: any }>(`/payroll/slips/${id}`),
+  generateSalarySlip: (data: { employee_id: string; month: number; year: number; basic_salary: number; earnings: any[]; deductions: any[] }) => 
+    api.post<{ data: any }>('/payroll/slips', data),
+  deleteSalarySlip: (id: string) => api.delete(`/payroll/slips/${id}`),
+};
+
 export const productsApi = {
   getAll: (params?: { search?: string; category?: string }) => 
     api.get<{ data: any[]; pagination: any }>('/products', params),
@@ -487,13 +496,24 @@ export const workgroupsApi = {
 };
 
 export const marketingApi = {
+  getDashboardStats: () => api.get<any>('/marketing/dashboard'),
   getCampaigns: () => api.get<any[]>('/marketing/campaigns'),
   createCampaign: (data: any) => api.post<any>('/marketing/campaigns', data),
   updateCampaign: (id: string, data: any) => api.put<any>(`/marketing/campaigns/${id}`, data),
   deleteCampaign: (id: string) => api.delete(`/marketing/campaigns/${id}`),
+  sendCampaign: (id: string) => api.post<any>(`/marketing/campaigns/${id}/send`),
+  sendTestEmail: (campaignId: string, testEmail: string) => api.post<any>('/marketing/campaigns/test-email', { campaignId, testEmail }),
+  trackEmailEvent: (campaignId: string, email: string, eventType: string) => api.post<any>('/marketing/campaigns/track-event', { campaignId, email, eventType }),
+  verifyEmailConfig: () => api.get<any>('/marketing/email/verify-config'),
   getLists: () => api.get<any[]>('/marketing/lists'),
   createList: (data: any) => api.post<any>('/marketing/lists', data),
   deleteList: (id: string) => api.delete(`/marketing/lists/${id}`),
+  getListMembers: (listId: string) => api.get<any[]>(`/marketing/lists/${listId}/members`),
+  addListMembers: (listId: string, contacts: any[]) => api.post<any>(`/marketing/lists/${listId}/members`, { contacts }),
+  exportListMembers: (listId: string) => {
+    const token = api.getToken();
+    window.open(`${API_BASE_URL}/marketing/lists/${listId}/export?token=${token}`, '_blank');
+  },
   getForms: () => api.get<any[]>('/marketing/forms'),
   createForm: (data: any) => api.post<any>('/marketing/forms', data),
   deleteForm: (id: string) => api.delete(`/marketing/forms/${id}`),
@@ -501,6 +521,7 @@ export const marketingApi = {
   createSequence: (data: any) => api.post<any>('/marketing/sequences', data),
   updateSequence: (id: string, data: any) => api.put<any>(`/marketing/sequences/${id}`, data),
   deleteSequence: (id: string) => api.delete(`/marketing/sequences/${id}`),
+  getAnalytics: (params?: { startDate?: string; endDate?: string }) => api.get<any>('/marketing/analytics', { params }),
   // Form submissions stub
   getFormSubmissions: (formId: string) => api.get<any[]>(`/marketing/forms/${formId}/submissions`),
   // Campaign events stub

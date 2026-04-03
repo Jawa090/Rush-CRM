@@ -5,14 +5,29 @@ const leaveController = require('../../controllers/hrms/leaveController');
 
 router.use(auth, requireOrg);
 
-router.get('/', leaveController.getAll);
-router.get('/balance', leaveController.getBalance);
+// Leave Types
 router.get('/types', leaveController.getLeaveTypes);
 router.post('/types', leaveController.createLeaveType);
-router.get('/:id', leaveController.getById);
-router.post('/', leaveController.create);
-router.put('/:id', leaveController.update);
-router.patch('/:id', leaveController.update);
-router.delete('/:id', leaveController.remove);
+router.put('/types/:id', leaveController.updateLeaveType);
+
+// Leave Balances
+router.get('/balance/my', leaveController.getMyBalance);
+router.get('/balance/:employeeId', leaveController.getEmployeeBalance);
+router.post('/balance/:employeeId/initialize', leaveController.initializeEmployeeBalance);
+
+// Leave Requests
+router.get('/', leaveController.getLeaveRequests);
+router.post('/', leaveController.createLeaveRequest);
+router.patch('/:id', leaveController.updateLeaveRequest);
+
+// Analytics
+router.get('/analytics/stats', leaveController.getLeaveAnalytics);
+
+// Calendar
+router.get('/calendar/view', leaveController.getLeaveCalendar);
+
+// Public Holidays
+router.get('/holidays/list', leaveController.getPublicHolidays);
+router.post('/holidays', leaveController.createPublicHoliday);
 
 module.exports = router;

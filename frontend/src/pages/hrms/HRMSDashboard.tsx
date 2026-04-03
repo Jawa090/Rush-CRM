@@ -4,13 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Users, Clock, Calendar, UserCheck, UserX, AlertCircle,
   CheckCircle, Timer, Bell, Activity, ArrowUpRight, TrendingUp,
+  TrendingDown, Briefcase, Award, DollarSign, Target,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface HRMSStats {
@@ -54,203 +57,306 @@ export default function HRMSDashboard() {
     queryFn: () => api.get<HRMSStats>(`/hrms/stats?period=${period}`),
     refetchInterval: 30000,
   });
+  
   const { data: activities = [] } = useQuery({
     queryKey: ["hrms-activities"],
     queryFn: () => api.get<RecentActivity[]>("/hrms/activities"),
     refetchInterval: 60000,
   });
+  
   const { data: todayAttendance = [] } = useQuery({
     queryKey: ["hrms-today-attendance"],
     queryFn: () => api.get<AttendanceRecord[]>("/hrms/attendance/today"),
     refetchInterval: 30000,
   });
 
+  // Fetch leave analytics
+  const { data: leaveAnalytics } = useQuery({
+    queryKey: ["leave-analytics-dashboard"],
+    queryFn: () => api.get("/leave/analytics/stats"),
+  });
+
+  const leaveStats = (leaveAnalytics as any)?.data?.stats || {};
+
   const attendanceRate = stats?.totalEmployees
     ? Math.round(((stats.presentToday || 0) / stats.totalEmployees) * 100) : 0;
 
-  const statTiles = [
-    { label: "Total Employees", value: stats?.totalEmployees ?? 0,   sub: "active workforce",    color: "bg-blue-500",    icon: Users,     href: "/hrms/employees" },
-    { label: "Present Today",   value: stats?.presentToday ?? 0,     sub: `${attendanceRate}% rate`, color: "bg-emerald-500", icon: UserCheck, href: "/hrms/attendance" },
-    { label: "Absent Today",    value: stats?.absentToday ?? 0,      sub: "not checked in",      color: "bg-red-500",     icon: UserX,     href: "/hrms/attendance" },
-    { label: "Late Arrivals",   value: stats?.lateToday ?? 0,        sub: "past schedule",       color: "bg-orange-500",  icon: AlertCircle, href: "/hrms/attendance" },
-    { label: "Pending Leaves",  value: stats?.pendingLeaves ?? 0,    sub: "awaiting approval",   color: "bg-yellow-500",  icon: Calendar,  href: "/hrms/leave" },
-    { label: "Approved Leaves", value: stats?.approvedLeaves ?? 0,   sub: "this period",         color: "bg-violet-500",  icon: CheckCircle, href: "/hrms/leave" },
-    { label: "Total Hours",     value: stats?.totalHoursToday ? `${stats.totalHoursToday}h` : "0h", sub: "logged today", color: "bg-cyan-500", icon: Timer, href: "/hrms/attendance" },
-    { label: "Avg Work Hours",  value: stats?.averageWorkHours ? `${stats.averageWorkHours.toFixed(1)}h` : "0h", sub: "daily average", color: "bg-slate-500", icon: TrendingUp, href: "/hrms" },
-  ];
+  const productivityScore = stats?.averageWorkHours 
+    ? Math.min(Math.round((stats.averageWorkHours / 8) * 100), 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">HRMS</h1>
-          <p className="text-sm text-muted-foreground">{format(new Date(), "EEEE, MMMM d, yyyy")}</p>
+          <h1 className="text-3xl font-bold tracking-tight">HRMS Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            {format(new Date(), "EEEE, MMMM d, yyyy")}
+          </p>
         </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="h-8 w-32 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">Today</SelectItem>
-            <SelectItem value="week">This Week</SelectItem>
-            <SelectItem value="month">This Month</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => navigate("/hrms/employees")} className="gap-2">
+            <Users className="h-4 w-4" />
+            Manage Employees
+          </Button>
+        </div>
       </div>
 
-      {/* Stat tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-        {statTiles.map((s) => (
-          <button
-            key={s.label}
-            onClick={() => navigate(s.href)}
-            className="col-span-1 rounded-xl border border-border/50 bg-card p-4 text-left hover:shadow-sm hover:border-primary/20 transition-all group"
-          >
-            <div className={cn("p-1.5 rounded-lg w-fit mb-2", s.color)}>
-              <s.icon className="h-3.5 w-3.5 text-white" />
+      {/* Key Metrics - Top Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Employees */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Employees</p>
+                <p className="text-3xl font-bold mt-2">{stats?.totalEmployees ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">Active workforce</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
             </div>
-            <p className="text-xl font-bold tabular-nums">{s.value}</p>
-            <p className="text-xs font-medium text-muted-foreground leading-tight">{s.label}</p>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">{s.sub}</p>
-          </button>
+          </CardContent>
+        </Card>
+
+        {/* Attendance Rate */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Attendance Rate</p>
+                <p className="text-3xl font-bold mt-2">{attendanceRate}%</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                <UserCheck className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+            <Progress value={attendanceRate} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {stats?.presentToday ?? 0} present today
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Pending Leaves */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending Leaves</p>
+                <p className="text-3xl font-bold mt-2">{stats?.pendingLeaves ?? 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">Awaiting approval</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+            {stats?.pendingLeaves && stats.pendingLeaves > 0 && (
+              <Button 
+                variant="link" 
+                size="sm" 
+                className="mt-2 p-0 h-auto text-xs"
+                onClick={() => navigate("/hrms/leave")}
+              >
+                Review requests →
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Productivity Score */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Productivity</p>
+                <p className="text-3xl font-bold mt-2">{productivityScore}%</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+            <Progress value={productivityScore} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-2">
+              {stats?.averageWorkHours?.toFixed(1) ?? 0}h avg daily
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Secondary Metrics */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        {[
+          { label: "Present", value: stats?.presentToday ?? 0, color: "bg-emerald-500", icon: UserCheck },
+          { label: "Absent", value: stats?.absentToday ?? 0, color: "bg-red-500", icon: UserX },
+          { label: "Late", value: stats?.lateToday ?? 0, color: "bg-orange-500", icon: AlertCircle },
+          { label: "On Leave", value: stats?.approvedLeaves ?? 0, color: "bg-blue-500", icon: Calendar },
+          { label: "Total Hours", value: `${stats?.totalHoursToday ?? 0}h`, color: "bg-cyan-500", icon: Timer },
+          { label: "Avg Hours", value: `${stats?.averageWorkHours?.toFixed(1) ?? 0}h`, color: "bg-slate-500", icon: TrendingUp },
+          { label: "Leave Requests", value: leaveStats.total_requests ?? 0, color: "bg-violet-500", icon: Briefcase },
+          { label: "Approved", value: leaveStats.approved ?? 0, color: "bg-teal-500", icon: CheckCircle },
+        ].map((stat) => (
+          <Card key={stat.label} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className={cn("p-2 rounded-lg w-fit mb-2", stat.color)}>
+                <stat.icon className="h-4 w-4 text-white" />
+              </div>
+              <p className="text-2xl font-bold">{stat.value}</p>
+              <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
-      {/* Attendance rate visual */}
-      <div className="rounded-xl border border-border/50 bg-card p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm font-semibold">Attendance Overview</p>
-            <p className="text-xs text-muted-foreground">{period === "today" ? "Today" : period === "week" ? "This week" : "This month"}</p>
-          </div>
-          <span className="text-2xl font-bold tabular-nums">{attendanceRate}%</span>
-        </div>
-        <Progress value={attendanceRate} className="h-2 mb-3" />
-        <div className="flex items-center gap-4 flex-wrap text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Present ({stats?.presentToday ?? 0})</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500" />Absent ({stats?.absentToday ?? 0})</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-orange-500" />Late ({stats?.lateToday ?? 0})</span>
-          <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500" />On Leave ({stats?.approvedLeaves ?? 0})</span>
-        </div>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Today's Attendance - 2 columns */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Today's Attendance</CardTitle>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate("/hrms/attendance")}
+                className="gap-1"
+              >
+                View All
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Table Header */}
+            <div className="flex items-center gap-3 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider border-b bg-muted/30 rounded-t-lg">
+              <span className="flex-1">Employee</span>
+              <span className="w-20 text-center hidden sm:block">Clock In</span>
+              <span className="w-20 text-center hidden sm:block">Clock Out</span>
+              <span className="w-16 text-center hidden md:block">Hours</span>
+              <span className="w-24 text-center">Status</span>
+            </div>
+
+            {/* Table Body */}
+            <div className="divide-y">
+              {(todayAttendance as AttendanceRecord[]).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                  <Clock className="h-12 w-12 text-muted-foreground/20" />
+                  <p className="text-sm text-muted-foreground">No attendance records yet</p>
+                </div>
+              ) : (todayAttendance as AttendanceRecord[]).slice(0, 8).map((record) => (
+                <div key={record.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Avatar className="h-9 w-9 shrink-0">
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                        {getInitials(record.employee_name || "?")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium truncate">{record.employee_name || "Unknown"}</span>
+                  </div>
+                  <span className="w-20 text-center text-sm text-muted-foreground hidden sm:block">
+                    {record.clock_in ? format(new Date(record.clock_in), "HH:mm") : "—"}
+                  </span>
+                  <span className="w-20 text-center text-sm text-muted-foreground hidden sm:block">
+                    {record.clock_out ? format(new Date(record.clock_out), "HH:mm") : 
+                      <span className="text-emerald-600 text-xs font-medium">Active</span>}
+                  </span>
+                  <span className="w-16 text-center text-sm text-muted-foreground hidden md:block">
+                    {record.total_hours ? `${record.total_hours}h` : "—"}
+                  </span>
+                  <div className="w-24 flex justify-center">
+                    <Badge variant="outline" className={cn("text-xs capitalize", STATUS_COLORS[record.status] ?? "bg-muted text-muted-foreground")}>
+                      {record.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Activity Feed - 1 column */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-muted-foreground" />
+              <CardTitle>Recent Activity</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {(activities as RecentActivity[]).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-2">
+                  <Activity className="h-12 w-12 text-muted-foreground/20" />
+                  <p className="text-sm text-muted-foreground">No recent activity</p>
+                </div>
+              ) : (activities as RecentActivity[]).slice(0, 10).map((activity) => {
+                const activityInfo = ACTIVITY_ICONS[activity.type] ?? { icon: Activity, color: "text-muted-foreground" };
+                const Icon = activityInfo.icon;
+                return (
+                  <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className={cn("mt-0.5 shrink-0 p-2 rounded-full bg-muted", activityInfo.color)}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{activity.employee_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{activity.message}</p>
+                      <p className="text-xs text-muted-foreground/60 mt-1">
+                        {format(new Date(activity.timestamp), "HH:mm")}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Two columns: attendance list + activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Today's attendance */}
-        <div className="lg:col-span-2 rounded-xl border border-border/50 bg-card overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-border/40 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-semibold">Today's Attendance</span>
-            </div>
-            <button onClick={() => navigate("/hrms/attendance")} className="text-xs text-primary hover:underline flex items-center gap-0.5">
-              Full view <ArrowUpRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Column headers */}
-          <div className="flex items-center gap-3 px-5 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-b border-border/30 bg-muted/20">
-            <span className="flex-1">Employee</span>
-            <span className="w-16 text-center hidden sm:block">Clock In</span>
-            <span className="w-16 text-center hidden sm:block">Clock Out</span>
-            <span className="w-12 text-center hidden md:block">Hours</span>
-            <span className="w-20 text-center">Status</span>
-          </div>
-
-          <div className="divide-y divide-border/40">
-            {(todayAttendance as AttendanceRecord[]).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <Clock className="h-8 w-8 text-muted-foreground/20" />
-                <p className="text-sm text-muted-foreground">No attendance records yet</p>
-              </div>
-            ) : (todayAttendance as AttendanceRecord[]).slice(0, 10).map((r) => (
-              <div key={r.id} className="flex items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <Avatar className="h-7 w-7 shrink-0">
-                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                      {getInitials(r.employee_name || "?")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium truncate">{r.employee_name || "Unknown"}</span>
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { label: "Manage Employees", sub: "View & edit staff", icon: Users, href: "/hrms/employees", color: "bg-blue-500" },
+              { label: "Attendance", sub: "Clock in/out records", icon: Clock, href: "/hrms/attendance", color: "bg-emerald-500" },
+              { label: "Leave Management", sub: "Requests & approvals", icon: Calendar, href: "/hrms/leave", color: "bg-orange-500" },
+              { label: "Notifications", sub: "Alerts & updates", icon: Bell, href: "/hrms/notifications", color: "bg-violet-500" },
+            ].map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.href)}
+                className="flex flex-col items-center gap-3 p-6 rounded-xl border border-border hover:shadow-lg hover:border-primary/30 transition-all group"
+              >
+                <div className={cn("p-4 rounded-full", item.color)}>
+                  <item.icon className="h-6 w-6 text-white" />
                 </div>
-                <span className="w-16 text-center text-xs text-muted-foreground hidden sm:block">
-                  {r.clock_in ? format(new Date(r.clock_in), "HH:mm") : "—"}
-                </span>
-                <span className="w-16 text-center text-xs text-muted-foreground hidden sm:block">
-                  {r.clock_out ? format(new Date(r.clock_out), "HH:mm") : <span className="text-emerald-500 text-[10px]">Active</span>}
-                </span>
-                <span className="w-12 text-center text-xs text-muted-foreground hidden md:block">
-                  {r.total_hours ? `${r.total_hours}h` : "—"}
-                </span>
-                <div className="w-20 flex justify-center">
-                  <Badge variant="outline" className={cn("text-[10px] capitalize", STATUS_COLORS[r.status] ?? "bg-muted text-muted-foreground")}>
-                    {r.status.replace("_", " ")}
-                  </Badge>
+                <div className="text-center">
+                  <p className="text-sm font-semibold">{item.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{item.sub}</p>
                 </div>
-              </div>
+                <ArrowUpRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
+              </button>
             ))}
           </div>
-        </div>
-
-        {/* Recent activity */}
-        <div className="rounded-xl border border-border/50 bg-card overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-border/40 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-semibold">Activity Feed</span>
-          </div>
-          <div className="divide-y divide-border/40">
-            {(activities as RecentActivity[]).length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <Activity className="h-8 w-8 text-muted-foreground/20" />
-                <p className="text-sm text-muted-foreground">No recent activity</p>
-              </div>
-            ) : (activities as RecentActivity[]).slice(0, 12).map((a) => {
-              const ai = ACTIVITY_ICONS[a.type] ?? { icon: Activity, color: "text-muted-foreground" };
-              const Icon = ai.icon;
-              return (
-                <div key={a.id} className="flex items-start gap-3 px-5 py-3 hover:bg-muted/30 transition-colors">
-                  <div className={cn("mt-0.5 shrink-0", ai.color)}>
-                    <Icon className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{a.employee_name}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">{a.message}</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                      {format(new Date(a.timestamp), "HH:mm")}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Quick nav */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: "Employees",       sub: "Manage staff",         icon: Users,     href: "/hrms/employees",  color: "bg-blue-500" },
-          { label: "Attendance",      sub: "Clock in/out",         icon: Clock,     href: "/hrms/attendance", color: "bg-emerald-500" },
-          { label: "Leave",           sub: "Requests & approvals", icon: Calendar,  href: "/hrms/leave",      color: "bg-orange-500" },
-          { label: "Notifications",   sub: "Alerts & updates",     icon: Bell,      href: "/hrms/notifications", color: "bg-violet-500" },
-        ].map((item) => (
-          <button
-            key={item.label}
-            onClick={() => navigate(item.href)}
-            className="flex items-center gap-3 rounded-xl border border-border/50 bg-card px-4 py-3.5 hover:shadow-sm hover:border-primary/20 transition-all text-left group"
-          >
-            <div className={cn("p-2 rounded-lg shrink-0", item.color)}>
-              <item.icon className="h-4 w-4 text-white" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium">{item.label}</p>
-              <p className="text-[10px] text-muted-foreground">{item.sub}</p>
-            </div>
-            <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/30 group-hover:text-muted-foreground ml-auto transition-colors" />
-          </button>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

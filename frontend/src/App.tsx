@@ -52,14 +52,22 @@ import AnalyticsPage from "./pages/crm/AnalyticsPage";
 import HRMSDashboard from "./pages/hrms/HRMSDashboard";
 import AttendancePage from "./pages/hrms/AttendancePage";
 import EmployeesPage from "./pages/hrms/EmployeesPage";
+import CreateEmployeePage from "./pages/hrms/CreateEmployeePage";
+import EditEmployeePage from "./pages/hrms/EditEmployeePage";
+import EmployeeDetailPage from "./pages/hrms/EmployeeDetailPage";
 import LeaveManagementPage from "./pages/hrms/LeaveManagementPage";
+import PayrollPage from "./pages/hrms/PayrollPage";
+import GenerateSalarySlipPage from "./pages/hrms/GenerateSalarySlipPage";
+import ViewSalarySlipPage from "./pages/hrms/ViewSalarySlipPage";
 import NotificationsPage from "./pages/hrms/NotificationsPage";
 // Inventory
+import InventoryDashboard from "./pages/inventory/InventoryDashboard";
 import ProductsPage from "./pages/inventory/ProductsPage";
 import StockPage from "./pages/inventory/StockPage";
 import PurchaseOrdersPage from "./pages/inventory/PurchaseOrdersPage";
 import VendorsPage from "./pages/inventory/VendorsPage";
 import WarehousePage from "./pages/inventory/WarehousePage";
+import EmployeeAssignmentsPage from "./pages/inventory/EmployeeAssignmentsPage";
 // Admin
 import UsersPage from "./pages/admin/UsersPage";
 import RolesPage from "./pages/admin/RolesPage";
@@ -81,10 +89,12 @@ import ProjectReportPage from "./pages/projects/ProjectReportPage";
 // Marketing
 import MarketingDashboardPage from "./pages/marketing/MarketingDashboardPage";
 import CampaignsPage from "./pages/marketing/CampaignsPage";
-import ListsPage from "./pages/marketing/ListsPage";
-import FormsPage from "./pages/marketing/FormsPage";
-import SequencesPage from "./pages/marketing/SequencesPage";
-import MarketingAnalyticsPage from "./pages/marketing/MarketingAnalyticsPage";
+import CreateCampaignPage from "./pages/marketing/CreateCampaignPage";
+import VisualCampaignBuilder from "./pages/marketing/VisualCampaignBuilder";
+import EnhancedListsPage from "./pages/marketing/EnhancedListsPage";
+import EnhancedFormsPage from "./pages/marketing/EnhancedFormsPage";
+import EnhancedSequencesPage from "./pages/marketing/EnhancedSequencesPage";
+import EnhancedAnalyticsPage from "./pages/marketing/EnhancedAnalyticsPage";
 // Other
 import PlaceholderPage from "./pages/PlaceholderPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -155,14 +165,23 @@ const App = () => (
                   <Route path="/hrms/dashboard" element={<HRMSDashboard />} />
                   <Route path="/hrms/attendance" element={<AttendancePage />} />
                   <Route path="/hrms/employees" element={<EmployeesPage />} />
+                  <Route path="/hrms/employees/create" element={<CreateEmployeePage />} />
+                  <Route path="/hrms/employees/:id/edit" element={<EditEmployeePage />} />
+                  <Route path="/hrms/employees/:id" element={<EmployeeDetailPage />} />
                   <Route path="/hrms/leave" element={<LeaveManagementPage />} />
+                  <Route path="/hrms/payroll" element={<PayrollPage />} />
+                  <Route path="/hrms/payroll/generate" element={<GenerateSalarySlipPage />} />
+                  <Route path="/hrms/payroll/view/:id" element={<ViewSalarySlipPage />} />
                   <Route path="/hrms/notifications" element={<NotificationsPage />} />
                   {/* Inventory Routes */}
+                  <Route path="/inventory" element={<InventoryDashboard />} />
                   <Route path="/inventory/products" element={<ProductsPage />} />
                   <Route path="/inventory/stock" element={<StockPage />} />
                   <Route path="/inventory/purchase-orders" element={<PurchaseOrdersPage />} />
                   <Route path="/inventory/vendors" element={<VendorsPage />} />
                   <Route path="/inventory/warehouse" element={<WarehousePage />} />
+                  <Route path="/inventory/warehouses" element={<WarehousePage />} />
+                  <Route path="/inventory/assignments" element={<EmployeeAssignmentsPage />} />
                   {/* Admin Routes - restricted to admin users */}
                   <Route path="/admin/users" element={<AdminRoute><UsersPage /></AdminRoute>} />
                   <Route path="/admin/roles" element={<AdminRoute><RolesPage /></AdminRoute>} />
@@ -178,10 +197,12 @@ const App = () => (
                   {/* Marketing */}
                   <Route path="/marketing" element={<MarketingDashboardPage />} />
                   <Route path="/marketing/campaigns" element={<CampaignsPage />} />
-                  <Route path="/marketing/lists" element={<ListsPage />} />
-                  <Route path="/marketing/forms" element={<FormsPage />} />
-                  <Route path="/marketing/sequences" element={<SequencesPage />} />
-                  <Route path="/marketing/analytics" element={<MarketingAnalyticsPage />} />
+                  <Route path="/marketing/campaigns/create" element={<CreateCampaignPage />} />
+                  <Route path="/marketing/campaigns/builder" element={<VisualCampaignBuilder />} />
+                  <Route path="/marketing/lists" element={<EnhancedListsPage />} />
+                  <Route path="/marketing/forms" element={<EnhancedFormsPage />} />
+                  <Route path="/marketing/sequences" element={<EnhancedSequencesPage />} />
+                  <Route path="/marketing/analytics" element={<EnhancedAnalyticsPage />} />
                   {/* Other Routes */}
                   <Route path="/settings" element={<SettingsPage />} />
                 </Route>

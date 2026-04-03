@@ -1,3 +1,9 @@
+<<<<<<<< HEAD:backend/src/controllers/collaboration/connectedDrivesController.js
+========
+const express = require('express');
+const router = express.Router();
+const { auth, requireOrg } = require('../../middleware/auth');
+>>>>>>>> origin/main:backend/src/routes/collaboration/drives.js
 const db = require('../../config/database');
 
 /**

@@ -118,6 +118,7 @@ const navigation: NavItem[] = [
       { title: "Attendance", href: "/hrms/attendance", icon: ClipboardList },
       { title: "Employees", href: "/hrms/employees", icon: UserCheck },
       { title: "Leave Management", href: "/hrms/leave", icon: Calendar },
+      { title: "Payroll", href: "/hrms/payroll", icon: DollarSign },
       { title: "Notifications", href: "/hrms/notifications", icon: Bell },
     ],
   },
@@ -125,11 +126,13 @@ const navigation: NavItem[] = [
     title: "Inventory",
     icon: Package,
     children: [
+      { title: "Dashboard", href: "/inventory", icon: BarChart3 },
       { title: "Products", href: "/inventory/products", icon: ShoppingCart },
-      { title: "Stock Tracking", href: "/inventory/stock", icon: BarChart3 },
+      { title: "Stock Tracking", href: "/inventory/stock", icon: Package },
       { title: "Purchase Orders", href: "/inventory/purchase-orders", icon: FileText },
       { title: "Vendors", href: "/inventory/vendors", icon: Truck },
-      { title: "Warehouse", href: "/inventory/warehouse", icon: Warehouse },
+      { title: "Warehouses", href: "/inventory/warehouses", icon: Warehouse },
+      { title: "Assignments", href: "/inventory/assignments", icon: Users },
     ],
   },
   {

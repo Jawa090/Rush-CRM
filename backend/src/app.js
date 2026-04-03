@@ -13,7 +13,9 @@ const activityRoutes = require('./routes/crm/activities');
 const employeeRoutes = require('./routes/hrms/employees');
 const attendanceRoutes = require('./routes/hrms/attendance');
 const leaveRoutes = require('./routes/hrms/leave');
+const payrollRoutes = require('./routes/payroll/payroll');
 const productRoutes = require('./routes/inventory/products');
+const inventoryRoutes = require('./routes/inventory/inventory');
 const stockRoutes = require('./routes/inventory/stock');
 const vendorRoutes = require('./routes/inventory/vendors');
 const documentsRoutes = require('./routes/projects/documents');
@@ -65,7 +67,13 @@ router.use('/api/activities', activityRoutes);
 router.use('/api/employees', employeeRoutes);
 router.use('/api/attendance', attendanceRoutes);
 router.use('/api/leave', leaveRoutes);
+<<<<<<< HEAD
 router.use('/api/products', productRoutes);
+=======
+router.use('/api/payroll', payrollRoutes);
+router.use('/api/products', productRoutes);
+router.use('/api/inventory', inventoryRoutes);
+>>>>>>> origin/main
 router.use('/api/stock', stockRoutes);
 router.use('/api/vendors', vendorRoutes);
 router.use('/api/documents', documentsRoutes);

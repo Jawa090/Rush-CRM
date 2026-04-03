@@ -67,7 +67,21 @@ export interface MarketingSequence {
 export function useMarketingCampaigns() {
   return useQuery({
     queryKey: ['marketing_campaigns'],
-    queryFn: () => marketingApi.getCampaigns(),
+    queryFn: async () => {
+      const response: any = await marketingApi.getCampaigns();
+      // Backend returns { data: [...] }, so we extract the data array
+      return Array.isArray(response) ? response : (response.data || []);
+    },
+  });
+}
+
+export function useMarketingDashboardStats() {
+  return useQuery({
+    queryKey: ['marketing_dashboard_stats'],
+    queryFn: async () => {
+      const response: any = await marketingApi.getDashboardStats();
+      return response.data || response || {};
+    },
   });
 }
 
@@ -105,7 +119,10 @@ export function useDeleteCampaign() {
 export function useMarketingLists() {
   return useQuery({
     queryKey: ['marketing_lists'],
-    queryFn: () => marketingApi.getLists(),
+    queryFn: async () => {
+      const response: any = await marketingApi.getLists();
+      return Array.isArray(response) ? response : (response.data || []);
+    },
   });
 }
 
@@ -132,7 +149,10 @@ export function useDeleteList() {
 export function useMarketingForms() {
   return useQuery({
     queryKey: ['marketing_forms'],
-    queryFn: () => marketingApi.getForms(),
+    queryFn: async () => {
+      const response: any = await marketingApi.getForms();
+      return Array.isArray(response) ? response : (response.data || []);
+    },
   });
 }
 
@@ -180,7 +200,10 @@ export function useCampaignEvents(campaignId?: string) {
 export function useMarketingSequences() {
   return useQuery({
     queryKey: ['marketing_sequences'],
-    queryFn: () => marketingApi.getSequences(),
+    queryFn: async () => {
+      const response: any = await marketingApi.getSequences();
+      return Array.isArray(response) ? response : (response.data || []);
+    },
   });
 }
 
