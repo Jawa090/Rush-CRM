@@ -366,11 +366,17 @@ export const rolesApi = {
 };
 
 export const calendarApi = {
-  getEvents: (params?: { startDate?: string; endDate?: string }) => api.get<any[]>('/calendar', params),
+  getEvents: (params?: { startDate?: string; endDate?: string; search?: string }) => api.get<any[]>('/calendar', params),
+  getConnections: () => api.get<any[]>('/calendar/connections'),
+
   getById: (id: string) => api.get<any>(`/calendar/${id}`),
   create: (data: any) => api.post<any>('/calendar', data),
   update: (id: string, data: any) => api.put<any>(`/calendar/${id}`, data),
   delete: (id: string) => api.delete(`/calendar/${id}`),
+  getGoogleAuthUrl: () => api.get<{ url: string }>('/calendar/auth/google'),
+  syncConnection: (provider: string) => api.post('/calendar/sync-provider', { provider }),
+  disconnectConnection: (provider: string) => api.post('/calendar/disconnect-provider', { provider }),
+
 };
 
 export const workflowsApi = {

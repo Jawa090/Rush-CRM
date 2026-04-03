@@ -15,6 +15,7 @@ interface ConnectCalendarsDialogProps {
   onOpenChange: (open: boolean) => void;
   connectedCalendars: string[];
   onConnect: (providerId: string) => void;
+  onDisconnect: (providerId: string) => void;
   onManage: (providerId: string) => void;
 }
 
@@ -23,6 +24,7 @@ export function ConnectCalendarsDialog({
   onOpenChange,
   connectedCalendars,
   onConnect,
+  onDisconnect,
   onManage,
 }: ConnectCalendarsDialogProps) {
   const providers: CalendarProvider[] = [
@@ -125,6 +127,14 @@ export function ConnectCalendarsDialog({
                     <Check className="w-4 h-4" />
                     CONNECTED
                   </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => onDisconnect(provider.id)}
+                  >
+                    Remove
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"

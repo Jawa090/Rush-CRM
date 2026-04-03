@@ -2,6 +2,10 @@ import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { type CalendarEvent } from "@/hooks/useCalendarEvents";
 import { format, isToday, isTomorrow, isThisWeek } from "date-fns";
+import { FcGoogle } from "react-icons/fc";
+import { FaApple, FaWindows } from "react-icons/fa";
+
+
 
 interface CalendarScheduleViewProps {
   onConnectClick: () => void;
@@ -11,9 +15,9 @@ interface CalendarScheduleViewProps {
 }
 
 const calendarIcons = [
-  { name: "Google Calendar", icon: "📅", color: "text-red-500" },
-  { name: "iCloud Calendar", icon: "🍎", color: "text-foreground" },
-  { name: "Office365 Calendar", icon: "📆", color: "text-red-500" },
+  { name: "Google Calendar", icon: FcGoogle },
+  { name: "iCloud Calendar", icon: FaApple },
+  { name: "Office365 Calendar", icon: FaWindows },
 ];
 
 export function CalendarScheduleView({ onConnectClick, hasConnectedCalendar, events, onEventClick }: CalendarScheduleViewProps) {
@@ -123,7 +127,7 @@ export function CalendarScheduleView({ onConnectClick, hasConnectedCalendar, eve
         {calendarIcons.map((cal) => (
           <div key={cal.name} className="flex flex-col items-center gap-2 text-center">
             <div className="w-12 h-12 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-sm">
-              <span className="text-2xl">{cal.icon}</span>
+              <cal.icon className="w-6 h-6" />
             </div>
             <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
               {cal.name.split(' ')[0]}

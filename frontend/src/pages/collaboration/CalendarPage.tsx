@@ -1,8 +1,23 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Settings, ChevronLeft, ChevronRight, ChevronDown, Check, Users, Clock } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Plus,
+  Search,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Check,
+  Users,
+  Clock,
+} from "lucide-react";
 import { CalendarMiniWidget } from "@/components/calendar/CalendarMiniWidget";
 import { CalendarDayView } from "@/components/calendar/CalendarDayView";
 import { CalendarWeekView } from "@/components/calendar/CalendarWeekView";
@@ -15,7 +30,10 @@ import { CalendarSettingsDialog } from "@/components/calendar/CalendarSettingsDi
 import { ICloudCredentialsDialog } from "@/components/calendar/ICloudCredentialsDialog";
 import { CreateEventDialog } from "@/components/calendar/CreateEventDialog";
 import { EventDetailDialog } from "@/components/calendar/EventDetailDialog";
-import { useCalendarEvents, type CalendarEvent } from "@/hooks/useCalendarEvents";
+import {
+  useCalendarEvents,
+  type CalendarEvent,
+} from "@/hooks/useCalendarEvents";
 import { useCalendarConnections } from "@/hooks/useCalendarConnections";
 import { toast } from "@/hooks/use-toast";
 
@@ -44,9 +62,22 @@ export default function CalendarPage() {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [icloudDialogOpen, setIcloudDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState("");
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [defaultEventHour, setDefaultEventHour] = useState<number | undefined>();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [previousView, setPreviousView] = useState<typeof activeView | null>(null);
+
+  // Sync searchQuery to view mode
+  useEffect(() => {
+    if (searchQuery.trim() && activeView !== "schedule") {
+      setPreviousView(activeView);
+      setActiveView("schedule");
+    } else if (!searchQuery.trim() && previousView) {
+      setActiveView(previousView);
+      setPreviousView(null);
+    }
+  }, [searchQuery, activeView, previousView]);
 
   // Compute date range for the current view
   const dateRange = useMemo(() => {
@@ -69,10 +100,29 @@ export default function CalendarPage() {
     return { start, end };
   }, [selectedDate, activeView]);
 
-  const { events, isLoading } = useCalendarEvents(dateRange.start, dateRange.end);
-  const { connections, connectCalendar, connectICloud, syncICloudEvents, syncMicrosoftEvents, disconnectByProvider } = useCalendarConnections();
+  const { events, isLoading } = useCalendarEvents(
+    searchQuery.trim() ? undefined : dateRange.start,
+    searchQuery.trim() ? undefined : dateRange.end,
+    searchQuery.trim() || undefined
+  );
 
-  const connectedProviders = connections.map(c => c.provider);
+  const selectedEvent = useMemo(() => {
+    if (!selectedEventId || !Array.isArray(events)) return null;
+    return events.find(e => e.id === selectedEventId) || null;
+  }, [selectedEventId, events]);
+
+  const filteredEvents = events; // Now filtered by backend during search
+
+  const {
+    connections,
+    connectCalendar,
+    connectICloud,
+    syncICloudEvents,
+    syncMicrosoftEvents,
+    disconnectByProvider,
+  } = useCalendarConnections();
+
+  const connectedProviders = connections.map((c) => c.provider);
   const hasConnectedCalendar = connectedProviders.length > 0;
 
   const handleConnect = (providerId: string) => {
@@ -100,7 +150,7 @@ export default function CalendarPage() {
 
   const handleSync = () => {
     if (selectedProvider === "icloud") {
-      const icloudConn = connections.find(c => c.provider === "icloud");
+      const icloudConn = connections.find((c) => c.provider === "icloud");
       if (icloudConn) {
         const now = new Date();
         const threeMonthsAgo = new Date(now);
@@ -116,7 +166,7 @@ export default function CalendarPage() {
       }
     }
     if (selectedProvider === "microsoft") {
-      const msConn = connections.find(c => c.provider === "microsoft");
+      const msConn = connections.find((c) => c.provider === "microsoft");
       if (msConn) {
         const now = new Date();
         const threeMonthsAgo = new Date(now);
@@ -131,11 +181,14 @@ export default function CalendarPage() {
         return;
       }
     }
-    toast({ title: "Syncing...", description: "Your calendar is being synchronized." });
+    toast({
+      title: "Syncing...",
+      description: "Your calendar is being synchronized.",
+    });
   };
 
   const handleEventClick = (event: CalendarEvent) => {
-    setSelectedEvent(event);
+    setSelectedEventId(event.id);
     setEventDetailOpen(true);
   };
 
@@ -146,12 +199,22 @@ export default function CalendarPage() {
   };
 
   const formatHeaderDate = () => {
-    if (activeView === "day") return selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    if (activeView === "week") return selectedDate.toLocaleDateString('en-US', { month: 'long' });
-    return selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    if (activeView === "day")
+      return selectedDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    if (activeView === "week")
+      return selectedDate.toLocaleDateString("en-US", { month: "long" });
+    return selectedDate.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
   };
 
-  const getWeekdayName = () => selectedDate.toLocaleDateString('en-US', { weekday: 'long' });
+  const getWeekdayName = () =>
+    selectedDate.toLocaleDateString("en-US", { weekday: "long" });
 
   const navigatePrev = () => {
     const d = new Date(selectedDate);
@@ -172,13 +235,42 @@ export default function CalendarPage() {
   const renderView = () => {
     switch (activeView) {
       case "day":
-        return <CalendarDayView selectedDate={selectedDate} events={events} onEventClick={handleEventClick} onSlotClick={handleSlotClick} />;
+        return (
+          <CalendarDayView
+            selectedDate={selectedDate}
+            events={filteredEvents}
+            onEventClick={handleEventClick}
+            onSlotClick={handleSlotClick}
+          />
+        );
       case "week":
-        return <CalendarWeekView selectedDate={selectedDate} events={events} onEventClick={handleEventClick} onSlotClick={handleSlotClick} />;
+        return (
+          <CalendarWeekView
+            selectedDate={selectedDate}
+            events={filteredEvents}
+            onEventClick={handleEventClick}
+            onSlotClick={handleSlotClick}
+          />
+        );
       case "month":
-        return <CalendarMonthView selectedDate={selectedDate} onDateSelect={setSelectedDate} events={events} onEventClick={handleEventClick} onSlotClick={(d) => handleSlotClick(d)} />;
+        return (
+          <CalendarMonthView
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+            events={filteredEvents}
+            onEventClick={handleEventClick}
+            onSlotClick={(d) => handleSlotClick(d)}
+          />
+        );
       case "schedule":
-        return <CalendarScheduleView onConnectClick={() => setConnectDialogOpen(true)} hasConnectedCalendar={hasConnectedCalendar} events={events} onEventClick={handleEventClick} />;
+        return (
+          <CalendarScheduleView
+            onConnectClick={() => setConnectDialogOpen(true)}
+            hasConnectedCalendar={hasConnectedCalendar}
+            events={filteredEvents}
+            onEventClick={handleEventClick}
+          />
+        );
       case "invitations":
         return <CalendarInvitationsView />;
       default:
@@ -216,11 +308,21 @@ export default function CalendarPage() {
                     <Plus className="h-4 w-4 mr-2" />
                     New Event
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setDefaultEventHour(undefined); setCreateEventOpen(true); }}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setDefaultEventHour(undefined);
+                      setCreateEventOpen(true);
+                    }}
+                  >
                     <Users className="h-4 w-4 mr-2" />
                     New Meeting
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setDefaultEventHour(undefined); setCreateEventOpen(true); }}>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setDefaultEventHour(undefined);
+                      setCreateEventOpen(true);
+                    }}
+                  >
                     <Clock className="h-4 w-4 mr-2" />
                     New Reminder
                   </DropdownMenuItem>
@@ -229,16 +331,18 @@ export default function CalendarPage() {
 
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input 
-                  placeholder="Search events..." 
-                  className="pl-9 w-64 bg-white/60 border-slate-200 focus:bg-white dark:bg-slate-800/60 dark:border-slate-700" 
+                <Input
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-64 bg-white/60 border-slate-200 focus:bg-white dark:bg-slate-800/60 dark:border-slate-700"
                 />
               </div>
 
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-lg bg-white/60 hover:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-800" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-lg bg-white/60 hover:bg-white dark:bg-slate-800/60 dark:hover:bg-slate-800"
                 onClick={() => setSettingsDialogOpen(true)}
               >
                 <Settings className="h-5 w-5" />
@@ -267,38 +371,66 @@ export default function CalendarPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     {/* View Selector */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2 bg-white dark:bg-slate-800">
-                          {activeView.charAt(0).toUpperCase() + activeView.slice(1)} View
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 bg-white dark:bg-slate-800"
+                        >
+                          {activeView.charAt(0).toUpperCase() +
+                            activeView.slice(1)}{" "}
+                          View
                           <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => setActiveView("day")}>Day View</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setActiveView("week")}>Week View</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setActiveView("month")}>Month View</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setActiveView("schedule")}>Schedule View</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setActiveView("day")}>
+                          Day View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setActiveView("week")}>
+                          Week View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setActiveView("month")}
+                        >
+                          Month View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setActiveView("schedule")}
+                        >
+                          Schedule View
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
                     {/* Navigation */}
                     <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={navigatePrev} className="hover:bg-slate-100 dark:hover:bg-slate-800">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={navigatePrev}
+                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setSelectedDate(new Date())}
                         className="px-4 bg-white dark:bg-slate-800"
                       >
                         Today
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={navigateNext} className="hover:bg-slate-100 dark:hover:bg-slate-800">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={navigateNext}
+                        className="hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -312,7 +444,9 @@ export default function CalendarPage() {
                   <div className="flex items-center justify-center h-96">
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                      <p className="text-slate-600 dark:text-slate-400">Loading calendar...</p>
+                      <p className="text-slate-600 dark:text-slate-400">
+                        Loading calendar...
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -327,25 +461,35 @@ export default function CalendarPage() {
             <div className="bg-white/90 backdrop-blur-sm rounded-xl border border-slate-200/60 shadow-xl shadow-slate-900/5 dark:bg-slate-900/90 dark:border-slate-700/60 overflow-hidden">
               {/* Mini Calendar */}
               <div className="p-6">
-                <CalendarMiniWidget selectedDate={selectedDate} onDateSelect={setSelectedDate} />
+                <CalendarMiniWidget
+                  selectedDate={selectedDate}
+                  onDateSelect={setSelectedDate}
+                />
               </div>
 
               {/* Calendar Connections */}
               <div className="px-6 pb-6">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Calendar Connections</h3>
-                  
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Calendar Connections
+                  </h3>
+
                   {hasConnectedCalendar ? (
                     <div className="space-y-2">
                       {connections.map((conn) => (
-                        <div key={conn.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                        <div
+                          key={conn.id}
+                          className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg"
+                        >
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-sm font-medium">{providerNames[conn.provider] || conn.provider}</span>
+                            <span className="text-sm font-medium">
+                              {providerNames[conn.provider] || conn.provider}
+                            </span>
                           </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             onClick={() => handleManageCalendar(conn.provider)}
                             className="text-xs"
                           >
@@ -353,8 +497,8 @@ export default function CalendarPage() {
                           </Button>
                         </div>
                       ))}
-                      <Button 
-                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg shadow-green-500/25" 
+                      <Button
+                        className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg shadow-green-500/25"
                         onClick={() => setConnectDialogOpen(true)}
                       >
                         <Check className="h-4 w-4 mr-2" />
@@ -362,8 +506,8 @@ export default function CalendarPage() {
                       </Button>
                     </div>
                   ) : (
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25" 
+                    <Button
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25"
                       onClick={() => setConnectDialogOpen(true)}
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -388,12 +532,14 @@ export default function CalendarPage() {
                 size="sm"
                 onClick={() => setActiveView(tab.id)}
                 className={`px-4 text-xs transition-all ${
-                  activeView === tab.id 
-                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                } ${tab.id === "invitations" ? 'flex items-center gap-1' : ''}`}
+                  activeView === tab.id
+                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                } ${tab.id === "invitations" ? "flex items-center gap-1" : ""}`}
               >
-                {tab.id === "invitations" && <span className="text-green-600">@</span>}
+                {tab.id === "invitations" && (
+                  <span className="text-green-600">@</span>
+                )}
                 {tab.label}
               </Button>
             ))}
@@ -407,6 +553,7 @@ export default function CalendarPage() {
         onOpenChange={setConnectDialogOpen}
         connectedCalendars={connectedProviders}
         onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
         onManage={handleManageCalendar}
       />
       <ManageCalendarDialog
@@ -423,7 +570,10 @@ export default function CalendarPage() {
         onConnect={handleICloudConnect}
         isConnecting={connectICloud.isPending}
       />
-      <CalendarSettingsDialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen} />
+      <CalendarSettingsDialog
+        open={settingsDialogOpen}
+        onOpenChange={setSettingsDialogOpen}
+      />
       <CreateEventDialog
         open={createEventOpen}
         onOpenChange={setCreateEventOpen}

@@ -43,15 +43,16 @@ export interface CreateEventInput {
   color?: string;
 }
 
-export function useCalendarEvents(startDate?: Date, endDate?: Date) {
+export function useCalendarEvents(startDate?: Date, endDate?: Date, search?: string) {
   const queryClient = useQueryClient();
 
   const eventsQuery = useQuery({
-    queryKey: ['calendar-events', startDate?.toISOString(), endDate?.toISOString()],
+    queryKey: ['calendar-events', startDate?.toISOString(), endDate?.toISOString(), search],
     queryFn: async () => {
       const events = await calendarApi.getEvents({
         startDate: startDate?.toISOString(),
         endDate: endDate?.toISOString(),
+        search,
       });
       return events as CalendarEvent[];
     },

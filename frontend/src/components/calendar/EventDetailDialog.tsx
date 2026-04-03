@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MapPin, Clock, Users, Trash2, Pencil, Check, X } from "lucide-react";
 import { type CalendarEvent, useCalendarEvents, useEventAttendees, type EventAttendee } from "@/hooks/useCalendarEvents";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,32 +24,65 @@ export function EventDetailDialog({ open, onOpenChange, event }: EventDetailDial
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [isAllDay, setIsAllDay] = useState(false);
 
-  if (!event) return null;
+  const formatDateTimeLocal = useCallback((d: Date) => {
+    if (isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }, []);
 
-  const isOwner = event.created_by === profile?.id;
-  const startDate = new Date(event.start_time);
-  const endDate = new Date(event.end_time);
+  const isOwner = event ? event.created_by === profile?.id : false;
+  const startDate = event ? new Date(event.start_time) : new Date();
+  const endDate = event ? new Date(event.end_time) : new Date();
+
+
+  useEffect(() => {
+    if (open && event) {
+      setTitle(event.title);
+      setDescription(event.description || "");
+      setLocation(event.location || "");
+      setStartTime(formatDateTimeLocal(new Date(event.start_time)));
+      setEndTime(formatDateTimeLocal(new Date(event.end_time)));
+      setIsAllDay(event.is_all_day);
+    }
+    if (!open) {
+      setEditing(false);
+    }
+  }, [open, event, formatDateTimeLocal]);
+
+  const isValidDate = (d: Date) => !isNaN(d.getTime());
 
   const startEditing = () => {
+    if (!event) return;
     setTitle(event.title);
     setDescription(event.description || "");
     setLocation(event.location || "");
+    setStartTime(formatDateTimeLocal(new Date(event.start_time)));
+    setEndTime(formatDateTimeLocal(new Date(event.end_time)));
+    setIsAllDay(event.is_all_day);
     setEditing(true);
   };
 
   const handleSave = () => {
+    if (!event) return;
     updateEvent.mutate({
       id: event.id,
       title,
       description: description || undefined,
       location: location || undefined,
+      startTime: new Date(startTime).toISOString(),
+      endTime: new Date(endTime).toISOString(),
+      allDay: isAllDay,
     }, {
       onSuccess: () => setEditing(false),
     });
   };
 
   const handleDelete = () => {
+    if (!event) return;
     deleteEvent.mutate(event.id, {
       onSuccess: () => onOpenChange(false),
     });
@@ -67,26 +101,71 @@ export function EventDetailDialog({ open, onOpenChange, event }: EventDetailDial
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
-        <DialogHeader className="flex flex-row items-start justify-between">
-          <div className="flex items-center gap-3">
-            {event.color && <div className={`w-4 h-4 rounded-full ${event.color}`} />}
-            <DialogTitle className="text-xl">
-              {editing ? (
-                <Input value={title} onChange={e => setTitle(e.target.value)} className="text-lg font-semibold" />
-              ) : event.title}
-            </DialogTitle>
+        {!event ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
-        </DialogHeader>
+        ) : (
+          <>
+            <DialogHeader className="flex flex-row items-start justify-between">
+              <div className="flex items-center gap-3">
+                {event.color && <div className={`w-4 h-4 rounded-full ${event.color}`} />}
+                <DialogTitle className="text-xl">
+                  {editing ? (
+                    <Input value={title} onChange={e => setTitle(e.target.value)} className="text-lg font-semibold" />
+                  ) : event.title}
+                </DialogTitle>
+              </div>
+            </DialogHeader>
 
         <div className="space-y-4 py-2">
           {/* Time */}
-          <div className="flex items-start gap-3 text-sm">
-            <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
-            <div>
-              <p>{format(startDate, 'EEEE, MMMM d, yyyy')}</p>
-              <p className="text-muted-foreground">
-                {event.is_all_day ? 'All day' : `${format(startDate, 'h:mm a')} – ${format(endDate, 'h:mm a')}`}
-              </p>
+          <div className="space-y-3">
+            {editing && (
+              <div className="flex items-center gap-2 mb-2">
+                <Checkbox id="allDay" checked={isAllDay} onCheckedChange={(c) => setIsAllDay(c as boolean)} />
+                <Label htmlFor="allDay" className="text-sm font-normal cursor-pointer">All day event</Label>
+              </div>
+            )}
+            
+            <div className="flex items-start gap-3 text-sm">
+              <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+              <div className="flex-1">
+                {editing ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">Start</Label>
+                      <Input
+                        type={isAllDay ? "date" : "datetime-local"}
+                        value={isAllDay ? startTime.split('T')[0] : startTime}
+                        onChange={e => setStartTime(isAllDay ? e.target.value + 'T00:00' : e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase font-bold text-muted-foreground">End</Label>
+                      <Input
+                        type={isAllDay ? "date" : "datetime-local"}
+                        value={isAllDay ? endTime.split('T')[0] : endTime}
+                        onChange={e => setEndTime(isAllDay ? e.target.value + 'T23:59' : e.target.value)}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p>{isValidDate(startDate) ? format(startDate, 'EEEE, MMMM d, yyyy') : 'No Date'}</p>
+                    <p className="text-muted-foreground">
+                      {event.is_all_day 
+                        ? 'All day' 
+                        : (isValidDate(startDate) && isValidDate(endDate)
+                            ? `${format(startDate, 'h:mm a')} – ${format(endDate, 'h:mm a')}`
+                            : 'No Time')
+                      }
+                    </p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -162,6 +241,8 @@ export function EventDetailDialog({ open, onOpenChange, event }: EventDetailDial
               </>
             )}
           </div>
+        )}
+          </>
         )}
       </DialogContent>
     </Dialog>

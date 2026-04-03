@@ -10,7 +10,9 @@ class GmailOAuthService {
     // Check if Google OAuth credentials are configured
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback';
+    const port = process.env.PORT || 4000;
+    const redirectUri = process.env.GOOGLE_GMAIL_REDIRECT_URI || `${process.env.BACKEND_URL || `http://localhost:${port}`}/api/email/oauth-callback`;
+
 
     // Check for placeholder values
     const isPlaceholder = (value) => {

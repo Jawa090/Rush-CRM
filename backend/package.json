@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "migrate": "node src/database/migrate.js",
-    "migrations:run": "node src/database/run-migrations.js"
+    "migrations:run": "node src/database/run-all-migrations.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

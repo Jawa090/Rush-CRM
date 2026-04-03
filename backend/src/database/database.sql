@@ -822,7 +822,8 @@ BEGIN
 END $$;
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_deals_converted_from_lead ON deals(converted_from_lead_id);
+  -- Index moved to line 1017 after column addition
+
 CREATE INDEX IF NOT EXISTS idx_deals_assigned_to ON deals(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_deals_expected_close ON deals(expected_close_date);
 CREATE INDEX IF NOT EXISTS idx_deals_pipeline ON deals(pipeline);
@@ -973,6 +974,26 @@ BEGIN
     CREATE INDEX idx_deal_signing_parties_deal ON deal_signing_parties(deal_id);
     CREATE INDEX idx_deal_signing_parties_contact ON deal_signing_parties(contact_id);
   END IF;
+
+  -- Create customers table if it doesn't exist
+  CREATE TABLE IF NOT EXISTS customers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'active',
+    tier VARCHAR(50),
+    notes TEXT,
+    tags TEXT[],
+    lead_id UUID,
+    deal_id UUID,
+    company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  );
+
 
   -- Add missing conversion fields to customers table
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
@@ -1675,15 +1696,15 @@ CREATE TABLE IF NOT EXISTS calendar_events (
   title VARCHAR(255) NOT NULL,
   description TEXT,
   location VARCHAR(255),
-  start_time TIMESTAMP NOT NULL,
-  end_time TIMESTAMP NOT NULL,
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ NOT NULL,
   is_all_day BOOLEAN DEFAULT false,
   recurrence_rule TEXT,
   color VARCHAR(50) DEFAULT '#3b82f6',
   external_calendar_id VARCHAR(255),
   external_provider VARCHAR(50),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Calendar connections table for external calendar integrations
@@ -1696,11 +1717,11 @@ CREATE TABLE IF NOT EXISTS calendar_connections (
   external_calendar_id VARCHAR(255),
   access_token TEXT,
   refresh_token TEXT,
-  expires_at TIMESTAMP,
+  expires_at TIMESTAMPTZ,
   is_primary BOOLEAN DEFAULT false,
-  last_sync_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  last_sync_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Event attendees table
@@ -1713,8 +1734,8 @@ CREATE TABLE IF NOT EXISTS event_attendees (
   name VARCHAR(255),
   status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'accepted', 'declined', 'tentative'
   is_organizer BOOLEAN DEFAULT false,
-  response_time TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  response_time TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create indexes for better performance
@@ -2099,59 +2120,7 @@ CREATE TRIGGER trigger_add_creator_as_owner
     AFTER INSERT ON workgroups
     FOR EACH ROW EXECUTE FUNCTION add_creator_as_owner();
 
--- Insert sample data for testing
-INSERT INTO workgroups (org_id, name, description, avatar_color, type, is_private, created_by) VALUES
-(
-    (SELECT id FROM organizations LIMIT 1),
-    'Sales Team',
-    'Our amazing sales team working together to close deals and grow revenue',
-    'bg-blue-500',
-    'team',
-    false,
-    (SELECT id FROM users LIMIT 1)
-),
-(
-    (SELECT id FROM organizations LIMIT 1),
-    'Marketing Project',
-    'Q1 2024 marketing campaign planning and execution',
-    'bg-purple-500',
-    'project',
-    false,
-    (SELECT id FROM users LIMIT 1)
-),
-(
-    (SELECT id FROM organizations LIMIT 1),
-    'Development Squad',
-    'Core development team for product features',
-    'bg-green-500',
-    'team',
-    false,
-    (SELECT id FROM users LIMIT 1)
-),
-(
-    (SELECT id FROM organizations LIMIT 1),
-    'Executive Leadership',
-    'Private group for executive discussions and strategic planning',
-    'bg-red-500',
-    'private',
-    true,
-    (SELECT id FROM users LIMIT 1)
-);
 
--- Add some sample posts (will be added after channels are created by triggers)
-INSERT INTO workgroup_posts (workgroup_id, channel_id, user_id, content) VALUES
-(
-    (SELECT id FROM workgroups WHERE name = 'Sales Team' LIMIT 1),
-    (SELECT id FROM workgroup_channels WHERE workgroup_id = (SELECT id FROM workgroups WHERE name = 'Sales Team' LIMIT 1) AND is_general = true LIMIT 1),
-    (SELECT id FROM users LIMIT 1),
-    'Welcome to the Sales Team! Let''s crush our Q1 targets together! 🚀'
-),
-(
-    (SELECT id FROM workgroups WHERE name = 'Marketing Project' LIMIT 1),
-    (SELECT id FROM workgroup_channels WHERE workgroup_id = (SELECT id FROM workgroups WHERE name = 'Marketing Project' LIMIT 1) AND is_general = true LIMIT 1),
-    (SELECT id FROM users LIMIT 1),
-    'Marketing campaign kickoff meeting scheduled for tomorrow at 10 AM. Please review the brief I shared earlier.'
-);
 
 -- Create views for easier querying
 CREATE VIEW workgroup_stats AS
@@ -2335,109 +2304,7 @@ CREATE INDEX IF NOT EXISTS idx_unibox_campaigns_status ON unibox_campaigns(statu
 CREATE INDEX IF NOT EXISTS idx_unibox_email_activities_email_id ON unibox_email_activities(email_id);
 CREATE INDEX IF NOT EXISTS idx_unibox_email_activities_type ON unibox_email_activities(activity_type);
 
--- Insert sample email templates
-INSERT INTO unibox_templates (org_id, name, subject, body_text, template_type, created_by) VALUES
-(
-    (SELECT id FROM organizations LIMIT 1),
-    'Follow Up Template',
-    'Following up on our conversation',
-    'Hi {{name}},
 
-I wanted to follow up on our previous conversation about {{topic}}. 
-
-Are you still interested in learning more about how we can help with {{pain_point}}?
-
-Best regards,
-{{sender_name}}',
-    'follow_up',
-    (SELECT id FROM users LIMIT 1)
-),
-(
-    (SELECT id FROM organizations LIMIT 1),
-    'Meeting Request',
-    'Quick 15-minute call?',
-    'Hi {{name}},
-
-I hope this email finds you well. I''d love to schedule a quick 15-minute call to discuss how {{company}} can benefit from our solution.
-
-Would you be available for a brief call this week?
-
-Best regards,
-{{sender_name}}',
-    'cold_outreach',
-    (SELECT id FROM users LIMIT 1)
-);
-
--- Insert sample emails for testing (only if no emails exist)
-INSERT INTO unibox_emails (org_id, external_id, sender_email, sender_name, subject, body_text, status, received_at, is_read)
-SELECT 
-    org.id,
-    'sample-' || gen_random_uuid(),
-    'john.doe@example.com',
-    'John Doe',
-    'Interested in your services',
-    'Hi there,
-
-I came across your website and I''m very interested in learning more about your services. Could we schedule a call to discuss how you might be able to help our company?
-
-Looking forward to hearing from you.
-
-Best regards,
-John Doe
-CEO, Example Corp',
-    'Lead',
-    NOW() - INTERVAL '2 hours',
-    false
-FROM organizations org
-WHERE NOT EXISTS (SELECT 1 FROM unibox_emails)
-LIMIT 1;
-
-INSERT INTO unibox_emails (org_id, external_id, sender_email, sender_name, subject, body_text, status, received_at, is_read)
-SELECT 
-    org.id,
-    'sample-' || gen_random_uuid(),
-    'sarah.smith@techcorp.com',
-    'Sarah Smith',
-    'Re: Partnership Opportunity',
-    'Hello,
-
-Thank you for reaching out about the partnership opportunity. I''ve reviewed your proposal and I''m definitely interested in moving forward.
-
-When would be a good time for a call to discuss the next steps?
-
-Best,
-Sarah Smith
-Director of Business Development
-TechCorp Solutions',
-    'Interested',
-    NOW() - INTERVAL '1 day',
-    false
-FROM organizations org
-WHERE (SELECT COUNT(*) FROM unibox_emails) < 2
-LIMIT 1;
-
-INSERT INTO unibox_emails (org_id, external_id, sender_email, sender_name, subject, body_text, status, received_at, is_read, is_starred)
-SELECT 
-    org.id,
-    'sample-' || gen_random_uuid(),
-    'mike.johnson@startup.io',
-    'Mike Johnson',
-    'Meeting scheduled for tomorrow',
-    'Hi,
-
-Just confirming our meeting scheduled for tomorrow at 2 PM EST. I''ll send you the Zoom link shortly.
-
-Looking forward to our discussion!
-
-Mike Johnson
-Founder, Startup.io',
-    'Meeting Booked',
-    NOW() - INTERVAL '3 hours',
-    true,
-    true
-FROM organizations org
-WHERE (SELECT COUNT(*) FROM unibox_emails) < 3
-LIMIT 1;
 
 -- MIGRATION: 016a_fix_employees_schema.sql --
 -- Migration: Fix HRMS employees schema to match controller expectations

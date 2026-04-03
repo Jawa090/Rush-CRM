@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +56,25 @@ export function CreateEventDialog({ open, onOpenChange, defaultDate, defaultHour
   const [attendeeEmail, setAttendeeEmail] = useState("");
   const [attendees, setAttendees] = useState<{ email: string; name?: string }[]>([]);
 
+  const resetForm = useCallback(() => {
+    setTitle("");
+    setDescription("");
+    setLocation("");
+    setStartTime(formatDateTimeLocal(getDefaultStart()));
+    setEndTime(formatDateTimeLocal(getDefaultEnd()));
+    setIsAllDay(false);
+    setColor("bg-sky-500");
+    setAttendeeEmail("");
+    setAttendees([]);
+  }, [defaultDate, defaultHour]);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+  }, [open, resetForm]);
+
   const handleAddAttendee = () => {
     if (attendeeEmail && !attendees.some(a => a.email === attendeeEmail)) {
       setAttendees([...attendees, { email: attendeeEmail }]);
@@ -88,17 +107,7 @@ export function CreateEventDialog({ open, onOpenChange, defaultDate, defaultHour
     });
   };
 
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setLocation("");
-    setStartTime(formatDateTimeLocal(getDefaultStart()));
-    setEndTime(formatDateTimeLocal(getDefaultEnd()));
-    setIsAllDay(false);
-    setColor("bg-sky-500");
-    setAttendeeEmail("");
-    setAttendees([]);
-  };
+
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
